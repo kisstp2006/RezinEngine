@@ -7,6 +7,8 @@
 #include <Rezin/Graphics/ShaderProgram.hpp>
 #include <Rezin/Utilities/Log.hpp>
 #include <Rezin/Assets/Texture/Texture.hpp>
+#include <Rezin/Application/Application.hpp>
+
 
 #include <exception>
 
@@ -18,32 +20,16 @@
 #include <cstdio>
 #include <string>
 #include <cmath>
+#include <memory>
+#include <utility>
 
 
 using namespace std;
 using namespace rezin;
 
-void framebuffer_size_change_callback(GLFWwindow* window, int width, int height)
+namespace
 {
-    glViewport(0,0,width,height);
-}
-
-void process_input(GLFWwindow *window)
-{
-    if(glfwGetKey(window,GLFW_KEY_ESCAPE) == GLFW_PRESS){
-        glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
-}
-
-
-int main()
-{
-    int width = 1280;
-    int height = 720;
-    string windowName="RezinEngine";
-
-
-    float vertices[] = {
+    constexpr float cubeVertices[] = {
     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
      0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
      0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
@@ -85,193 +71,247 @@ int main()
      0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
     -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
     -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-};
+    };
 
-
-    glm::mat4 model = glm::mat4(1.0f);
-    model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-
-    glm::mat4 view = glm::mat4(1.0f);
-    // note that we're translating the scene in the reverse direction of where we want to move
-    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
-
-
-    glm::mat4 projection;
-    projection = glm::perspective(glm::radians(45.0f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f);
-
-
-
-    if(glfwInit() != GLFW_TRUE){
-        Log::Error("Failed to initialize GLFW");
-        return -1;
-    }
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4); //we set the minor and major version of opengl
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
-
-    GLFWwindow* window = glfwCreateWindow(width,height,windowName.c_str(),NULL,NULL);
-
-
-    //Shutdown the engine if GLFW failed to create a window
-    if(window == NULL){
-        Log::Error("Failed to create GLFW window: " + windowName);
-        glfwTerminate();
-        return -1;
-    }
-    glfwMakeContextCurrent(window);
-
-    if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
-        Log::Error("Failed to load GLAD (OpenGL)");
-        glfwDestroyWindow(window);
-        glfwTerminate();
-        return -1;
-    }
-
-    glEnable(GL_DEPTH_TEST);
-
-    int nrAttributes;
-    glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
-    Log::Info("Maximum nunmber of vertex attributes supported: " + std::to_string(nrAttributes));
-
-    glViewport(0,0,width,height);
-    glfwSetFramebufferSizeCallback(
-    window,
-    framebuffer_size_change_callback
-    );
-
-    TextureSpecification textureSpecification;
-    textureSpecification.flipVertically=true;
-    textureSpecification.generateMipmaps=true;
-    textureSpecification.srgb=true;
-
-    Texture2D texture1(
-                       "assets/texture/missingTexture.png",
-                        textureSpecification);
-
-    Texture2D texture2(
-                       "assets/texture/Happy_smiley_face.png",
-                        textureSpecification);
-
-
-
-    //Load test Texture
-
-    int exitCode=0;
-    try
-{
-    rezin::ShaderProgram shader(
-        "assets/shaders/basic.vert",
-        "assets/shaders/basic.frag"
-    );
-
-    shader.setInt("texture1",0); // set 0th uniform to ourTexture
-
-    shader.setInt("texture2",1); // set 1th uniform to ourTexture
-
-
-    shader.setMat4("model",model);
-    shader.setMat4("view", view);
-    shader.setMat4("projection", projection);
-
-
-
-    unsigned int VAO, VBO, EBO;
-
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        sizeof(vertices),
-        vertices,
-        GL_STATIC_DRAW
-    );
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-
-
-    glVertexAttribPointer(
-        0,
-        3,
-        GL_FLOAT,
-        GL_FALSE,
-        5 * sizeof(float),
-        reinterpret_cast<void*>(0)
-    );
-    glEnableVertexAttribArray(0);
-
-
-    glVertexAttribPointer(
-        2,
-        2,
-        GL_FLOAT,
-        GL_FALSE,
-        5 * sizeof(float),
-        reinterpret_cast<void*>(3 * sizeof(float))
-        );
-
-    glEnableVertexAttribArray(2);
-
-    glBindVertexArray(0);
-
-    while (!glfwWindowShouldClose(window))
+    class SandboxApplication final : public Application
     {
-        process_input(window);
+        public:
+            explicit SandboxApplication(
+            rezin::ApplicationSpecification specification
+        )
+            : Application(std::move(specification))
+        {
+        }
 
-        glClearColor(0.2F, 0.5F, 1.0F, 1.0F);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        protected:
+            void onStartup() override
+            {
+                glEnable(GL_DEPTH_TEST);
+
+                int maximumAttributes = 0;
+                glGetIntegerv(
+                    GL_MAX_VERTEX_ATTRIBS,
+                    &maximumAttributes
+                );
+
+                Log::Info(
+                    "Maximum number of vertex attributes supported: "
+                    + std::to_string(maximumAttributes)
+                );
+
+                rezin::TextureSpecification textureSpecification;
+                textureSpecification.flipVertically = true;
+                textureSpecification.generateMipmaps = true;
+                textureSpecification.srgb = true;
+
+                texture1_ = std::make_unique<rezin::Texture2D>(
+                    "assets/texture/missingTexture.png",
+                    textureSpecification
+                );
+
+                texture2_ = std::make_unique<rezin::Texture2D>(
+                    "assets/texture/Happy_smiley_face.png",
+                    textureSpecification
+                );
+
+                shader_ = std::make_unique<rezin::ShaderProgram>(
+                    "assets/shaders/basic.vert",
+                    "assets/shaders/basic.frag"
+                );
+
+                shader_->setInt("texture1", 0);
+                shader_->setInt("texture2", 1);
+
+                view_ = glm::translate(
+                    glm::mat4(1.0f),
+                    glm::vec3(0.0f, 0.0f, -3.0f)
+                );
+
+                updateProjection(width(), height());
+
+                shader_->setMat4("model", model_);
+                shader_->setMat4("view", view_);
+                shader_->setMat4("projection", projection_);
+
+                glGenVertexArrays(1, &vao_);
+                glGenBuffers(1, &vbo_);
+
+                glBindVertexArray(vao_);
+
+                glBindBuffer(GL_ARRAY_BUFFER, vbo_);
+                glBufferData(
+                    GL_ARRAY_BUFFER,
+                    sizeof(cubeVertices),
+                    cubeVertices,
+                    GL_STATIC_DRAW
+                );
+
+                glVertexAttribPointer(
+                    0,
+                    3,
+                    GL_FLOAT,
+                    GL_FALSE,
+                    5 * sizeof(float),
+                    reinterpret_cast<void*>(0)
+                );
+                glEnableVertexAttribArray(0);
+
+                glVertexAttribPointer(
+                    2,
+                    2,
+                    GL_FLOAT,
+                    GL_FALSE,
+                    5 * sizeof(float),
+                    reinterpret_cast<void*>(3 * sizeof(float))
+                );
+                glEnableVertexAttribArray(2);
+
+                glBindVertexArray(0);
+            }
+
+            void onUpdate(float deltaSeconds) override
+            {
+                if (
+                    glfwGetKey(nativeWindow(), GLFW_KEY_ESCAPE)
+                    == GLFW_PRESS
+                )
+                {
+                    requestQuit();
+                    return;
+                }
+
+                elapsedTime_ += deltaSeconds;
+
+                model_ = glm::rotate(
+                    glm::mat4(1.0f),
+                    elapsedTime_ * glm::radians(50.0f),
+                    glm::vec3(0.5f, 1.0f, 0.0f)
+                );
+
+                shader_->setMat4("model", model_);
+            }
+            void onRender() override
+            {
+                glClearColor(0.2f, 0.5f, 1.0f, 1.0f);
+                glClear(
+                    GL_COLOR_BUFFER_BIT
+                    | GL_DEPTH_BUFFER_BIT
+                );
+
+                texture1_->bind(0);
+                texture2_->bind(1);
+
+                shader_->use();
+
+                glBindVertexArray(vao_);
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                glBindVertexArray(0);
+            }
+
+            void onShutdown() noexcept override
+            {
+                if (vbo_ != 0)
+                {
+                    glDeleteBuffers(1, &vbo_);
+                    vbo_ = 0;
+                }
+
+                if (vao_ != 0)
+                {
+                    glDeleteVertexArrays(1, &vao_);
+                    vao_ = 0;
+                }
 
 
-        texture1.bind(0);
-        texture2.bind(1);
+                shader_.reset();
+                texture2_.reset();
+                texture1_.reset();
+            }
+            void onFramebufferResize(
+                std::uint32_t newWidth,
+                std::uint32_t newHeight
+            ) override
+            {
+                if (newHeight == 0)
+                    return;
+
+                updateProjection(newWidth, newHeight);
+
+                if (shader_)
+                {
+                    shader_->setMat4(
+                        "projection",
+                        projection_
+                    );
+                }
+            }
 
 
 
+        private:
 
-        model = glm::rotate(
-        glm::mat4(1.0f),
-        static_cast<float>(glfwGetTime()) * glm::radians(50.0f),
-        glm::vec3(0.5f, 1.0f, 0.0f)
+            void updateProjection(
+                std::uint32_t framebufferWidth,
+                std::uint32_t framebufferHeight
+            )
+            {
+                if (framebufferHeight == 0)
+                    return;
+
+                projection_ = glm::perspective(
+                    glm::radians(45.0f),
+                    static_cast<float>(framebufferWidth)
+                        / static_cast<float>(framebufferHeight),
+                    0.1f,
+                    100.0f
+                );
+            }
+
+            std::unique_ptr<rezin::ShaderProgram> shader_;
+            std::unique_ptr<rezin::Texture2D> texture1_;
+            std::unique_ptr<rezin::Texture2D> texture2_;
+
+            GLuint vao_ = 0;
+            GLuint vbo_ = 0;
+
+            glm::mat4 model_{1.0f};
+            glm::mat4 view_{1.0f};
+            glm::mat4 projection_{1.0f};
+
+            float elapsedTime_ = 0.0f;
+        };
+
+}
+
+
+
+int main()
+{
+    try
+    {
+        ApplicationSpecification specification;
+        specification.name="Rezin Sandbox";
+        specification.resizable=false;
+        specification.vsync=true;
+        specification.width = 1280;
+        specification.height = 720;
+
+         SandboxApplication application(
+            std::move(specification)
         );
 
-        shader.setMat4("model", model);
+        return application.run();
 
 
-        shader.use();
-        glBindVertexArray(VAO);
+    }
+    catch (const std::exception& error)
+    {
+        Log::Error(
+            std::string("Fatal application error: ")
+            + error.what()
+        );
 
-
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+        return -1;
     }
 
-
-
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
-    glDeleteVertexArrays(1, &VAO);
-}
-catch (const std::exception& error)
-{
-    Log::Error(std::string("Shader hiba: ") + error.what());
-
-    exitCode = -1;
-}
-
-
-    glfwDestroyWindow(window);
-    glfwTerminate();
-
-    return exitCode;
 }

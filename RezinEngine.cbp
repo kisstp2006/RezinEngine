@@ -86,10 +86,10 @@
 		<Unit filename="external/stb/stb_image.h" />
 		<Unit filename="include/Rezin/Graphics/ShaderProgram.hpp" />
 		<Unit filename="include/Rezin/Assets/Texture/Texture.hpp" />
+		<Unit filename="include/Rezin/Application/Application.hpp" />
 		<Unit filename="include/Rezin/Utilities/Log.hpp" />
 		<Unit filename="main.cpp" />
 		<Unit filename="src/Application/Application.cpp" />
-		<Unit filename="src/Application/Application.hpp" />
 		<Unit filename="src/Assets/Texture/Texture.cpp" />
 		<Unit filename="src/Graphics/ShaderProgram.cpp" />
 		<Unit filename="src/Utilities/Log.cpp" />

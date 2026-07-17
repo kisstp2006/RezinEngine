@@ -7,7 +7,7 @@ out vec2 TexCoord;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-uniform mat4 transform;
+
 
 void main()
 {
