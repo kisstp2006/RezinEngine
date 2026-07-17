@@ -69,22 +69,16 @@
 			<Add library="gdi32" />
 			<Add directory="C:/glfw-3.4.bin.WIN64/lib" />
 		</Linker>
+		<Unit filename="../../../Downloads/Happy_smiley_face.png" />
 		<Unit filename="assets/shaders/basic.frag" />
 		<Unit filename="assets/shaders/basic.vert" />
-		<Unit filename="assets/texture/missingTexture.png">
-			<Option compile="0" />
-			<Option link="0" />
-		</Unit>
-		<Unit filename="assets/texture/Happy_smiley_face.png">
-			<Option compile="0" />
-			<Option link="0" />
-		</Unit>
+		<Unit filename="assets/texture/missingTexture.png" />
 		<Unit filename="external/glad/src/glad.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="external/stb/stb_image.h" />
-		<Unit filename="include/Rezin/Graphics/ShaderProgram.hpp" />
 		<Unit filename="include/Rezin/Assets/Texture/Texture.hpp" />
+		<Unit filename="include/Rezin/Graphics/ShaderProgram.hpp" />
 		<Unit filename="include/Rezin/Utilities/Log.hpp" />
 		<Unit filename="main.cpp" />
 		<Unit filename="src/Assets/Texture/Texture.cpp" />

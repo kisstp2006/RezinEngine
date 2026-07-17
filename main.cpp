@@ -5,6 +5,8 @@
 
 
 #include <Rezin/Graphics/ShaderProgram.hpp>
+#include <Rezin/Utilities/Log.hpp>
+#include <Rezin/Assets/Texture/Texture.hpp>
 
 #include <exception>
 
@@ -13,10 +15,9 @@
 #include <string>
 #include <cmath>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
 
 using namespace std;
+using namespace rezin;
 
 void framebuffer_size_change_callback(GLFWwindow* window, int width, int height)
 {
@@ -37,32 +38,6 @@ int main()
     int height = 720;
     string windowName="RezinEngine";
 
-    //Load test Texture
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    // set the texture wrapping/filtering options (on the currently bound texture object)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load and generate the texture
-    int width, height, nrChannels;
-    unsigned char *data = stbi_load("assets/texture/missingTexture.png", &width, &height, &nrChannels, 0);
-    if (data)
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-
-
-    stbi_image_free(data); //Free the texture itself from memory (its still gonna be present on the renders)
-
-    //Load test Texture
 
     float vertices[] = {
     // positions          // colors           // texture coords
@@ -73,20 +48,14 @@ int main()
     };
 
     unsigned int indices[] = {
-    0, 1, 2
+    0, 1, 3,
+    1, 2, 3
     };
-
-    float texCoords[] = {
-    0.0f, 0.0f,  // lower-left corner
-    1.0f, 0.0f,  // lower-right corner
-    0.5f, 1.0f   // top-center corner
-    };
-
 
 
 
     if(glfwInit() != GLFW_TRUE){
-        cout << "Failed to initialize GLFW" << endl;
+        Log::Error("Failed to initialize GLFW");
         return -1;
     }
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4); //we set the minor and major version of opengl
@@ -99,14 +68,14 @@ int main()
 
     //Shutdown the engine if GLFW failed to create a window
     if(window == NULL){
-        cout<<windowName<<endl;
+        Log::Error("Failed to create GLFW window: " + windowName);
         glfwTerminate();
         return -1;
     }
     glfwMakeContextCurrent(window);
 
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)){
-        cout<<"Failed to load GLAD (OpenGL)"<<endl;
+        Log::Error("Failed to load GLAD (OpenGL)");
         glfwDestroyWindow(window);
         glfwTerminate();
         return -1;
@@ -114,13 +83,30 @@ int main()
 
     int nrAttributes;
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
-    std::cout << "Maximum nr of vertex attributes supported: " << nrAttributes << std::endl;
+    Log::Info("Maximum nr of vertex attributes supported: " + std::to_string(nrAttributes));
 
     glViewport(0,0,width,height);
     glfwSetFramebufferSizeCallback(
     window,
     framebuffer_size_change_callback
     );
+
+    TextureSpecification textureSpecification;
+    textureSpecification.flipVertically=true;
+    textureSpecification.generateMipmaps=true;
+    textureSpecification.srgb=true;
+
+    Texture2D texture1(
+                       "assets/texture/missingTexture.png",
+                        textureSpecification);
+
+    Texture2D texture2(
+                       "assets/texture/Happy_smiley_face.png",
+                        textureSpecification);
+
+
+
+    //Load test Texture
 
     int exitCode=0;
     try
@@ -130,11 +116,17 @@ int main()
         "assets/shaders/basic.frag"
     );
 
+    shader.setInt("texture1",0); // set 0th uniform to ourTexture
+
+    shader.setInt("texture2",1); // set 1th uniform to ourTexture
+
     unsigned int VAO, VBO, EBO;
 
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &EBO);
+
+
 
     glBindVertexArray(VAO);
 
@@ -159,7 +151,7 @@ int main()
         3,
         GL_FLOAT,
         GL_FALSE,
-        6 * sizeof(float),
+        8 * sizeof(float),
         reinterpret_cast<void*>(0)
     );
     glEnableVertexAttribArray(0);
@@ -169,7 +161,7 @@ int main()
         3,
         GL_FLOAT,
         GL_FALSE,
-        6 * sizeof(float),
+        8 * sizeof(float),
         reinterpret_cast<void*>(3 * sizeof(float))
     );
     glEnableVertexAttribArray(1);
@@ -180,17 +172,10 @@ int main()
         GL_FLOAT,
         GL_FALSE,
         8 * sizeof(float),
-        (void*)(6 * sizeof(float))
+        reinterpret_cast<void*>(6 * sizeof(float))
         );
 
     glEnableVertexAttribArray(2);
-
-
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-
 
     glBindVertexArray(0);
 
@@ -201,12 +186,16 @@ int main()
         glClearColor(0.2F, 0.5F, 1.0F, 1.0F);
         glClear(GL_COLOR_BUFFER_BIT);
 
+
+        texture1.bind(0);
+        texture2.bind(1);
+
         shader.use();
 
         glBindVertexArray(VAO);
         glDrawElements(
             GL_TRIANGLES,
-            3,
+            6,
             GL_UNSIGNED_INT,
             nullptr
         );
@@ -216,19 +205,20 @@ int main()
         glfwPollEvents();
     }
 
+
+
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &EBO);
     glDeleteVertexArrays(1, &VAO);
 }
 catch (const std::exception& error)
 {
-    std::cerr
-        << "Shader hiba: "
-        << error.what()
-        << '\n';
+    Log::Error(std::string("Shader hiba: ") + error.what());
 
     exitCode = -1;
 }
+
+
     glfwDestroyWindow(window);
     glfwTerminate();
 
