@@ -1,0 +1,47 @@
+# Bináris / build kimenetek
+bin/
+obj/
+
+# Fordítási adatbázis (generált)
+compile_commands.json
+
+# Code::Blocks / IDE fájlok
+*.depend
+*.layout
+*.layout.save
+codeblocks.log
+
+# Clangd nyelvi szerver cache (generált index fájlok)
+.cache/
+
+# Biztonsági mentések
+.bak/
+
+# Debug / release könyvtárak (ha vannak benne generált fájlok)
+Debug/
+Release/
+RelWithDebInfo/
+Shipping/
+
+# Visual Studio
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+x64/
+x86/
+
+# Egyéb IDE-k
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
