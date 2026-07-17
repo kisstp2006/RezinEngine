@@ -1,6 +1,7 @@
 # Bináris / build kimenetek
 bin/
 obj/
+build/
 
 # Fordítási adatbázis (generált)
 compile_commands.json

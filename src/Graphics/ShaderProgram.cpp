@@ -1,5 +1,7 @@
 #include <Rezin/Graphics/ShaderProgram.hpp>
 
+#include <glm/gtc/type_ptr.hpp>
+
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -138,9 +140,92 @@ void ShaderProgram::setInt(std::string_view name, int value) const
     glProgramUniform1i(programId_, findUniform(name), value);
 }
 
+void ShaderProgram::setUInt(std::string_view name, std::uint32_t value) const
+{
+    glProgramUniform1ui(programId_, findUniform(name), value);
+}
+
 void ShaderProgram::setFloat(std::string_view name, float value) const
 {
     glProgramUniform1f(programId_, findUniform(name), value);
+}
+
+void ShaderProgram::setVec2(std::string_view name, const glm::vec2& value) const
+{
+    glProgramUniform2fv(programId_, findUniform(name), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setVec3(std::string_view name, const glm::vec3& value) const
+{
+    glProgramUniform3fv(programId_, findUniform(name), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setVec4(std::string_view name, const glm::vec4& value) const
+{
+    glProgramUniform4fv(programId_, findUniform(name), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setIVec2(std::string_view name, const glm::ivec2& value) const
+{
+    glProgramUniform2iv(programId_, findUniform(name), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setIVec3(std::string_view name, const glm::ivec3& value) const
+{
+    glProgramUniform3iv(programId_, findUniform(name), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setIVec4(std::string_view name, const glm::ivec4& value) const
+{
+    glProgramUniform4iv(programId_, findUniform(name), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setUVec2(std::string_view name, const glm::uvec2& value) const
+{
+    glProgramUniform2uiv(programId_, findUniform(name), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setUVec3(std::string_view name, const glm::uvec3& value) const
+{
+    glProgramUniform3uiv(programId_, findUniform(name), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setUVec4(std::string_view name, const glm::uvec4& value) const
+{
+    glProgramUniform4uiv(programId_, findUniform(name), 1, glm::value_ptr(value));
+}
+
+void ShaderProgram::setMat2(std::string_view name, const glm::mat2& value) const
+{
+    glProgramUniformMatrix2fv(
+        programId_,
+        findUniform(name),
+        1,
+        GL_FALSE,
+        glm::value_ptr(value)
+    );
+}
+
+void ShaderProgram::setMat3(std::string_view name, const glm::mat3& value) const
+{
+    glProgramUniformMatrix3fv(
+        programId_,
+        findUniform(name),
+        1,
+        GL_FALSE,
+        glm::value_ptr(value)
+    );
+}
+
+void ShaderProgram::setMat4(std::string_view name, const glm::mat4& value) const
+{
+    glProgramUniformMatrix4fv(
+        programId_,
+        findUniform(name),
+        1,
+        GL_FALSE,
+        glm::value_ptr(value)
+    );
 }
 
 std::string ShaderProgram::readFile(const std::filesystem::path& path)

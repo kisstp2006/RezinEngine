@@ -10,6 +10,10 @@
 
 #include <exception>
 
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
 #include <iostream>
 #include <cstdio>
 #include <string>
@@ -40,17 +44,60 @@ int main()
 
 
     float vertices[] = {
-    // positions          // colors           // texture coords
-     0.5f,  0.5f, 0.0f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f,   // top right
-     0.5f, -0.5f, 0.0f,   0.0f, 1.0f, 0.0f,   1.0f, 0.0f,   // bottom right
-    -0.5f, -0.5f, 0.0f,   0.0f, 0.0f, 1.0f,   0.0f, 0.0f,   // bottom left
-    -0.5f,  0.5f, 0.0f,   1.0f, 1.0f, 0.0f,   0.0f, 1.0f    // top left
-    };
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
 
-    unsigned int indices[] = {
-    0, 1, 3,
-    1, 2, 3
-    };
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+};
+
+
+    glm::mat4 model = glm::mat4(1.0f);
+    model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+
+    glm::mat4 view = glm::mat4(1.0f);
+    // note that we're translating the scene in the reverse direction of where we want to move
+    view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f));
+
+
+    glm::mat4 projection;
+    projection = glm::perspective(glm::radians(45.0f), static_cast<float>(width) / static_cast<float>(height), 0.1f, 100.0f);
 
 
 
@@ -81,9 +128,11 @@ int main()
         return -1;
     }
 
+    glEnable(GL_DEPTH_TEST);
+
     int nrAttributes;
     glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &nrAttributes);
-    Log::Info("Maximum nr of vertex attributes supported: " + std::to_string(nrAttributes));
+    Log::Info("Maximum nunmber of vertex attributes supported: " + std::to_string(nrAttributes));
 
     glViewport(0,0,width,height);
     glfwSetFramebufferSizeCallback(
@@ -120,6 +169,13 @@ int main()
 
     shader.setInt("texture2",1); // set 1th uniform to ourTexture
 
+
+    shader.setMat4("model",model);
+    shader.setMat4("view", view);
+    shader.setMat4("projection", projection);
+
+
+
     unsigned int VAO, VBO, EBO;
 
     glGenVertexArrays(1, &VAO);
@@ -139,40 +195,26 @@ int main()
     );
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(
-        GL_ELEMENT_ARRAY_BUFFER,
-        sizeof(indices),
-        indices,
-        GL_STATIC_DRAW
-    );
+
 
     glVertexAttribPointer(
         0,
         3,
         GL_FLOAT,
         GL_FALSE,
-        8 * sizeof(float),
+        5 * sizeof(float),
         reinterpret_cast<void*>(0)
     );
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(
-        1,
-        3,
-        GL_FLOAT,
-        GL_FALSE,
-        8 * sizeof(float),
-        reinterpret_cast<void*>(3 * sizeof(float))
-    );
-    glEnableVertexAttribArray(1);
 
     glVertexAttribPointer(
         2,
         2,
         GL_FLOAT,
         GL_FALSE,
-        8 * sizeof(float),
-        reinterpret_cast<void*>(6 * sizeof(float))
+        5 * sizeof(float),
+        reinterpret_cast<void*>(3 * sizeof(float))
         );
 
     glEnableVertexAttribArray(2);
@@ -184,22 +226,31 @@ int main()
         process_input(window);
 
         glClearColor(0.2F, 0.5F, 1.0F, 1.0F);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
         texture1.bind(0);
         texture2.bind(1);
 
-        shader.use();
 
-        glBindVertexArray(VAO);
-        glDrawElements(
-            GL_TRIANGLES,
-            6,
-            GL_UNSIGNED_INT,
-            nullptr
+
+
+        model = glm::rotate(
+        glm::mat4(1.0f),
+        static_cast<float>(glfwGetTime()) * glm::radians(50.0f),
+        glm::vec3(0.5f, 1.0f, 0.0f)
         );
-        glBindVertexArray(0);
+
+        shader.setMat4("model", model);
+
+
+        shader.use();
+        glBindVertexArray(VAO);
+
+
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
 
         glfwSwapBuffers(window);
         glfwPollEvents();
