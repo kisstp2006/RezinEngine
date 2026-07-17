@@ -63,6 +63,7 @@
 			<Add option="-std=c++23" />
 			<Add directory="include" />
 			<Add directory="external/glad/include" />
+			<Add directory="external/stb" />
 			<Add directory="C:/glfw-3.4.bin.WIN64/include" />
 		</Compiler>
 		<Linker>
@@ -73,6 +74,10 @@
 		</Linker>
 		<Unit filename="external/glad/src/glad.c">
 			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="external/stb/stb_image.h">
+			<Option compile="0" />
+			<Option link="0" />
 		</Unit>
 		<Unit filename="assets/shaders/basic.frag">
 			<Option compile="0" />
