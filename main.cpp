@@ -134,6 +134,7 @@ namespace
                     "lightColor",
                     glm::vec3(1.0f)
                 );
+                objectShader_->setVec3("lightPos", lightPosition_); //if we want to move the light put it into render
 
                 EntityManager& entities = world_.entityManager();
                 cameraEntity_ = entities.createEntity();
