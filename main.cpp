@@ -5,6 +5,7 @@
 #include <Rezin/Utilities/Log.hpp>
 #include <Rezin/Graphics/Buffer.hpp>
 #include <Rezin/Graphics/VertexArray.hpp>
+#include <Rezin/Assets/Texture/Texture.hpp>
 #include <Rezin/Graphics/ShaderProgram.hpp>
 #include <Rezin/Application/Application.hpp>
 
@@ -23,55 +24,55 @@ using namespace rezin;
 
 namespace
 {
-    // Each vertex stores a position followed by its surface normal.
+    // Each vertex stores position.xyz, normal.xyz, and textureCoordinates.xy.
     constexpr float cubeVertices[] = {
         // Back face
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
 
         // Front face
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
 
         // Left face
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
 
         // Right face
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
 
         // Bottom face
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
 
         // Top face
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
     };
 
     glm::vec3 cubePositions[] = {
@@ -115,6 +116,8 @@ namespace
                     + std::to_string(maximumAttributes)
                 );
 
+
+
                 objectShader_ = std::make_unique<rezin::ShaderProgram>(
                     "assets/shaders/lighting.vert",
                     "assets/shaders/lighting.frag"
@@ -137,21 +140,19 @@ namespace
                 );
 
                 objectShader_->setVec3(
-                    "material.ambient",
-                    glm::vec3(1.0f, 0.5f, 0.31f)
-                );
-
-                objectShader_->setVec3(
-                    "material.diffuse",
-                    glm::vec3(1.0f, 0.5f, 0.31f)
-                );
-
-                objectShader_->setVec3(
                     "material.specular",
                     glm::vec3(0.5f, 0.5f, 0.5f)
                 );
 
                 objectShader_->setFloat("material.shininess", 32.0f);
+
+                diffuseMap_ = std::make_unique<Texture2D>(
+                    "assets/texture/missingTexture.png"
+                );
+
+                objectShader_->setInt("material.diffuse", 0);
+
+
 
                 EntityManager& entities = world_.entityManager();
                 cameraEntity_ = entities.createEntity();
@@ -191,7 +192,8 @@ namespace
 
                 vertexBuffer_->setLayout({
                     {ShaderDataType::Float3, "aPosition"},
-                    {ShaderDataType::Float3, "aNormal"}
+                    {ShaderDataType::Float3, "aNormal"},
+                    {ShaderDataType::Float2, "aTextureCoordinates"}
                 });
 
                 vertexArray_ = std::make_unique<VertexArray>();
@@ -230,6 +232,8 @@ namespace
                     GL_COLOR_BUFFER_BIT
                     | GL_DEPTH_BUFFER_BIT
                 );
+
+                diffuseMap_->bind(0);
 
                 objectShader_->use();
                 vertexArray_->bind();
@@ -459,6 +463,9 @@ namespace
 
                 objectShader_->setMat4("view", view_);
                 objectShader_->setVec3("viewPos", transform.position);
+                objectShader_->setInt("material.diffuse", 0);
+                                        diffuseMap_->bind(0);
+
                 lightShader_->setMat4("view", view_);
             }
 
@@ -513,6 +520,7 @@ namespace
 
             std::unique_ptr<ShaderProgram> objectShader_;
             std::unique_ptr<ShaderProgram> lightShader_;
+            std::unique_ptr<Texture2D> diffuseMap_;
 
             std::unique_ptr<VertexBuffer> vertexBuffer_;
             std::unique_ptr<VertexArray> vertexArray_;
@@ -528,7 +536,7 @@ namespace
             float cameraYaw_ = -90.0f;
             float cameraPitch_ = 0.0f;
 
-            static constexpr float cameraMovementSpeed_ = 2.5f;
+            static constexpr float cameraMovementSpeed_ = 4.5f;
             static constexpr float mouseSensitivity_ = 0.1f;
     };
 
