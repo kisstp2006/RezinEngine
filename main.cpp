@@ -420,6 +420,7 @@ namespace
                 );
 
                 objectShader_->setMat4("view", view_);
+                objectShader_->setVec3("viewPos", transform.position);
                 lightShader_->setMat4("view", view_);
             }
 
