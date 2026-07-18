@@ -72,6 +72,10 @@
 		</Linker>
 		<Unit filename="assets/shaders/basic.frag" />
 		<Unit filename="assets/shaders/basic.vert" />
+		<Unit filename="assets/shaders/lightCube.frag" />
+		<Unit filename="assets/shaders/lightCube.vert" />
+		<Unit filename="assets/shaders/lighting.frag" />
+		<Unit filename="assets/shaders/lighting.vert" />
 		<Unit filename="assets/texture/missingTexture.png">
 			<Option compile="0" />
 			<Option link="0" />

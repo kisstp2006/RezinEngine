@@ -1,22 +1,17 @@
 #include <glad/glad.h>
 
-
 #include <Rezin/ECS/ECS.hpp>
 #include <Rezin/Input/Input.hpp>
 #include <Rezin/Utilities/Log.hpp>
 #include <Rezin/Graphics/Buffer.hpp>
 #include <Rezin/Graphics/VertexArray.hpp>
 #include <Rezin/Graphics/ShaderProgram.hpp>
-#include <Rezin/Assets/Texture/Texture.hpp>
 #include <Rezin/Application/Application.hpp>
-
 
 #include <exception>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-
-
 
 #include <string>
 #include <memory>
@@ -27,48 +22,55 @@ using namespace rezin;
 
 namespace
 {
+    // Each vertex stores a position followed by its surface normal.
     constexpr float cubeVertices[] = {
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+        // Back face
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
 
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+        // Front face
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
 
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        // Left face
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
 
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+        // Right face
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
 
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+        // Bottom face
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
+        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
 
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+        // Top face
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
+        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
     };
 
     glm::vec3 cubePositions[] = {
@@ -112,28 +114,26 @@ namespace
                     + std::to_string(maximumAttributes)
                 );
 
-                rezin::TextureSpecification textureSpecification;
-                textureSpecification.flipVertically = true;
-                textureSpecification.generateMipmaps = true;
-                textureSpecification.srgb = true;
-
-                texture1_ = std::make_unique<rezin::Texture2D>(
-                    "assets/texture/missingTexture.png",
-                    textureSpecification
+                objectShader_ = std::make_unique<rezin::ShaderProgram>(
+                    "assets/shaders/lighting.vert",
+                    "assets/shaders/lighting.frag"
                 );
 
-                texture2_ = std::make_unique<rezin::Texture2D>(
-                    "assets/texture/Happy_smiley_face.png",
-                    textureSpecification
+                lightShader_ = std::make_unique<rezin::ShaderProgram>(
+                    "assets/shaders/lightCube.vert",
+                    "assets/shaders/lightCube.frag"
                 );
 
-                shader_ = std::make_unique<rezin::ShaderProgram>(
-                    "assets/shaders/basic.vert",
-                    "assets/shaders/basic.frag"
+                // Coral-colored objects reflecting a white light. These two
+                // uniforms are the starting point of the Basic Lighting lesson.
+                objectShader_->setVec3(
+                    "objectColor",
+                    glm::vec3(1.0f, 0.5f, 0.31f)
                 );
-
-                shader_->setInt("texture1", 0);
-                shader_->setInt("texture2", 1);
+                objectShader_->setVec3(
+                    "lightColor",
+                    glm::vec3(1.0f)
+                );
 
                 EntityManager& entities = world_.entityManager();
                 cameraEntity_ = entities.createEntity();
@@ -163,7 +163,8 @@ namespace
                 updateProjection(width(), height());
                 updateCameraView();
 
-                shader_->setMat4("projection", projection_);
+                objectShader_->setMat4("projection", projection_);
+                lightShader_->setMat4("projection", projection_);
 
                 vertexBuffer_ = std::make_unique<VertexBuffer>(
                     cubeVertices,
@@ -171,8 +172,8 @@ namespace
                 );
 
                 vertexBuffer_->setLayout({
-                    {ShaderDataType::Float3, "aPos"},
-                    {ShaderDataType::Float2, "aTexCoord"}
+                    {ShaderDataType::Float3, "aPosition"},
+                    {ShaderDataType::Float3, "aNormal"}
                 });
 
                 vertexArray_ = std::make_unique<VertexArray>();
@@ -181,6 +182,13 @@ namespace
                     *vertexBuffer_
                 );
 
+                // The light cube shares immutable vertex data with the scene
+                // cubes, but owns separate VAO state. Future changes to object
+                // attributes will therefore not alter the light's VAO.
+                lightVertexArray_ = std::make_unique<VertexArray>();
+                lightVertexArray_->addVertexBuffer(
+                    *vertexBuffer_
+                );
 
             }
 
@@ -204,10 +212,7 @@ namespace
                     | GL_DEPTH_BUFFER_BIT
                 );
 
-                texture1_->bind(0);
-                texture2_->bind(1);
-
-                shader_->use();
+                objectShader_->use();
                 vertexArray_->bind();
 
                 for (unsigned int i = 0; i < 10; ++i)
@@ -227,7 +232,7 @@ namespace
                         glm::vec3(1.0f, 0.3f, 0.5f)
                     );
 
-                    shader_->setMat4("model", model);
+                    objectShader_->setMat4("model", model);
 
                     glDrawArrays(
                         GL_TRIANGLES,
@@ -235,6 +240,27 @@ namespace
                         36
                     );
                 }
+
+                // Render a small white cube at the light's world-space position.
+                glm::mat4 lightModel{1.0f};
+                lightModel = glm::translate(
+                    lightModel,
+                    lightPosition_
+                );
+                lightModel = glm::scale(
+                    lightModel,
+                    glm::vec3(0.2f)
+                );
+
+                lightShader_->use();
+                lightShader_->setMat4("model", lightModel);
+                lightVertexArray_->bind();
+
+                glDrawArrays(
+                    GL_TRIANGLES,
+                    0,
+                    36
+                );
 
                 VertexArray::unbind();
 
@@ -250,13 +276,13 @@ namespace
 
                 cameraEntity_ = {};
 
+                lightVertexArray_.reset();
                 vertexArray_.reset();
 
                 vertexBuffer_.reset();
 
-                shader_.reset();
-                texture2_.reset();
-                texture1_.reset();
+                lightShader_.reset();
+                objectShader_.reset();
             }
             void onFramebufferResize(
                 std::uint32_t newWidth,
@@ -268,9 +294,13 @@ namespace
 
                 updateProjection(newWidth, newHeight);
 
-                if (shader_)
+                if (objectShader_ && lightShader_)
                 {
-                    shader_->setMat4(
+                    objectShader_->setMat4(
+                        "projection",
+                        projection_
+                    );
+                    lightShader_->setMat4(
                         "projection",
                         projection_
                     );
@@ -388,7 +418,8 @@ namespace
                     cameraUp
                 );
 
-                shader_->setMat4("view", view_);
+                objectShader_->setMat4("view", view_);
+                lightShader_->setMat4("view", view_);
             }
 
             void updateProjection(
@@ -440,15 +471,17 @@ namespace
                 }
             }
 
-            std::unique_ptr<ShaderProgram> shader_;
-            std::unique_ptr<Texture2D> texture1_;
-            std::unique_ptr<Texture2D> texture2_;
+            std::unique_ptr<ShaderProgram> objectShader_;
+            std::unique_ptr<ShaderProgram> lightShader_;
 
             std::unique_ptr<VertexBuffer> vertexBuffer_;
             std::unique_ptr<VertexArray> vertexArray_;
+            std::unique_ptr<VertexArray> lightVertexArray_;
 
             glm::mat4 view_{1.0f};
             glm::mat4 projection_{1.0f};
+
+            glm::vec3 lightPosition_{1.2f, 1.0f, 2.0f};
 
             float cameraYaw_ = -90.0f;
             float cameraPitch_ = 0.0f;
