@@ -62,12 +62,18 @@
 			<Add directory="external/stb" />
 			<Add directory="thirdparty/glm" />
 			<Add directory="thirdparty/glfw/include" />
+			<Add directory="build/thirdparty/assimp/include" />
+			<Add directory="thirdparty/assimp/include" />
 		</Compiler>
 		<Linker>
 			<Add option="-static" />
+			<Add library="assimp" />
+			<Add library="zlibstatic" />
 			<Add library="glfw3" />
 			<Add library="opengl32" />
 			<Add library="gdi32" />
+			<Add directory="build/thirdparty/assimp/lib" />
+			<Add directory="build/thirdparty/assimp/contrib/zlib" />
 			<Add directory="build/thirdparty/glfw/src" />
 		</Linker>
 		<Unit filename="assets/shaders/basic.frag" />
@@ -90,6 +96,7 @@
 		<Unit filename="external/stb/stb_image.h" />
 		<Unit filename="include/Rezin/ECS/Component.hpp" />
 		<Unit filename="include/Rezin/ECS/Components/CameraComponent.hpp" />
+		<Unit filename="include/Rezin/ECS/Components/LightComponent.hpp" />
 		<Unit filename="include/Rezin/ECS/Components/TransformComponent.hpp" />
 		<Unit filename="include/Rezin/ECS/Detail/ComponentPool.hpp" />
 		<Unit filename="include/Rezin/ECS/Detail/TypeId.hpp" />
@@ -120,6 +127,14 @@
 			<Option link="0" />
 		</Unit>
 		<Unit filename="thirdparty/glm/glm/glm.hpp">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="thirdparty/assimp/LICENSE">
+			<Option compile="0" />
+			<Option link="0" />
+		</Unit>
+		<Unit filename="thirdparty/assimp/include/assimp/Importer.hpp">
 			<Option compile="0" />
 			<Option link="0" />
 		</Unit>
