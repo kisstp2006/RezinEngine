@@ -86,6 +86,24 @@ namespace
     glm::vec3(-1.3f,  1.0f, -1.5f)
 };
 
+    //Camera position
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
+    //Camera direction
+    glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
+    //Right axis
+    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
+    //Up Axis
+    glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
+    //Look At
+    glm::mat4 view = glm::lookAt(
+        glm::vec3(0.0f, 0.0f, 3.0f),
+        glm::vec3(0.0f, 0.0f, 0.0f),
+        glm::vec3(0.0f, 1.0f, 0.0f)
+    );
+
+
     class SandboxApplication final : public Application
     {
         public:
@@ -184,7 +202,15 @@ namespace
                     glm::vec3(0.5f, 1.0f, 0.0f)
                 );
 
+
+                const float radius = 10.0f;
+                float camX = sin(glfwGetTime()/10) * radius;
+                float camZ = cos(glfwGetTime()/10) * radius;
+
+                view_ = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
+
                 shader_->setMat4("model", model_);
+                shader_->setMat4("view", view_);
             }
             void onRender() override
             {
