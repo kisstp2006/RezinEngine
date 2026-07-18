@@ -76,8 +76,9 @@ PixelFormat selectPixelFormat(int channels, bool srgb)
             };
         default:
             throw std::runtime_error(
-                "Nem tamogatott texturacsatorna-szam: "
+                "Unsupported texture channel count: "
                 + std::to_string(channels)
+                + ". Expected 1, 2, 3, or 4 color channels."
             );
     }
 }
@@ -88,7 +89,7 @@ std::vector<stbi_uc> readBinaryFile(const std::filesystem::path& path)
     if (!file.is_open())
     {
         throw std::runtime_error(
-            "Nem sikerult megnyitni a texturafajlt: " + path.string()
+            "Failed to open texture file: " + path.string()
         );
     }
 
@@ -96,7 +97,7 @@ std::vector<stbi_uc> readBinaryFile(const std::filesystem::path& path)
     if (endPosition <= 0)
     {
         throw std::runtime_error(
-            "A texturafajl ures vagy nem olvashato: " + path.string()
+            "Texture file is empty, or its size could not be read: " + path.string()
         );
     }
 
@@ -104,7 +105,7 @@ std::vector<stbi_uc> readBinaryFile(const std::filesystem::path& path)
     if (fileSize > static_cast<std::uintmax_t>(std::numeric_limits<int>::max()))
     {
         throw std::runtime_error(
-            "A texturafajl tul nagy az stb_image szamara: " + path.string()
+            "Texture file is too large for stb_image to decode: " + path.string()
         );
     }
 
@@ -118,7 +119,7 @@ std::vector<stbi_uc> readBinaryFile(const std::filesystem::path& path)
     if (!file)
     {
         throw std::runtime_error(
-            "Nem sikerult beolvasni a texturafajlt: " + path.string()
+            "Failed to read the complete texture file: " + path.string()
         );
     }
 
@@ -150,6 +151,8 @@ Texture2D::Texture2D(
     std::string failureReason;
 
     {
+        // stb_image's vertical-flip option is global state. The mutex prevents
+        // two loading threads from changing that setting at the same time.
         const std::scoped_lock lock(stbMutex());
         stbi_set_flip_vertically_on_load(specification_.flipVertically ? 1 : 0);
 
@@ -165,7 +168,7 @@ Texture2D::Texture2D(
         if (!pixels)
         {
             const char* reason = stbi_failure_reason();
-            failureReason = reason != nullptr ? reason : "ismeretlen stb_image hiba";
+            failureReason = reason != nullptr ? reason : "unknown stb_image error";
         }
 
         stbi_set_flip_vertically_on_load(0);
@@ -174,8 +177,8 @@ Texture2D::Texture2D(
     if (!pixels)
     {
         throw std::runtime_error(
-            "Nem sikerult betolteni a texturat: " + path_.string()
-            + " (" + failureReason + ")"
+            "Failed to decode texture file: " + path_.string()
+            + " (stb_image reason: " + failureReason + ")"
         );
     }
 
@@ -184,11 +187,13 @@ Texture2D::Texture2D(
     if (width_ > maximumTextureSize || height_ > maximumTextureSize)
     {
         throw std::runtime_error(
-            "A textura nagyobb a GPU altal tamogatott meretnel: "
+            "Texture dimensions exceed the maximum size supported by this GPU: "
             + path_.string()
         );
     }
 
+    // The file's channel count determines how incoming bytes are interpreted.
+    // The internal format determines how OpenGL stores those pixels on the GPU.
     const PixelFormat format = selectPixelFormat(channels_, specification_.srgb);
     const int largestDimension = std::max(width_, height_);
     const GLsizei mipLevels = specification_.generateMipmaps
@@ -197,7 +202,9 @@ Texture2D::Texture2D(
 
     glCreateTextures(GL_TEXTURE_2D, 1, &textureId_);
     if (textureId_ == 0)
-        throw std::runtime_error("Nem sikerult letrehozni az OpenGL texturat.");
+        throw std::runtime_error(
+            "OpenGL failed to create the Texture2D object."
+        );
 
     glTextureParameteri(
         textureId_,
@@ -231,6 +238,8 @@ Texture2D::Texture2D(
         height_
     );
 
+    // One-byte unpack alignment works for every supported channel count and
+    // prevents OpenGL from assuming extra padding at the end of image rows.
     GLint previousUnpackAlignment = 4;
     glGetIntegerv(GL_UNPACK_ALIGNMENT, &previousUnpackAlignment);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);

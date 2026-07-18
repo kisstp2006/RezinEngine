@@ -33,7 +33,8 @@ void glfwErrorCallback(int errorCode, const char* description) noexcept
     }
     catch (...)
     {
-        // its a C callback so dont export an exception
+        // GLFW calls this through a C API. A C++ exception must never escape a
+        // C callback boundary, so logging failures are deliberately ignored.
     }
 }
 
@@ -47,13 +48,13 @@ namespace rezin
         if(specification_.name.empty())
         {
             throw std::invalid_argument(
-            "Az alkalmazas neve nem lehet ures."
+            "Application name cannot be empty. Give the window a visible title."
             );
         }
         if(specification_.width == 0 || specification_.height == 0)
         {
             throw std::invalid_argument(
-            "Az alkalmazas merete nem lehet nulla."
+            "Initial application width and height must both be greater than zero."
             );
         }
 
@@ -61,7 +62,8 @@ namespace rezin
 
 Application::~Application()
 {
-    // if run() cant finish properly
+    // This is a final safety net for partial initialization or an early exit.
+    // shutdownPlatform() is safe to call more than once.
     shutdownPlatform();
 }
 
@@ -70,7 +72,7 @@ int Application::run()
     if (glfwInitialized_ || window_ != nullptr)
     {
         Log::Error(
-            "run() can only be called once per object"
+            "Application::run() cannot start while this Application instance already owns a GLFW window."
         );
 
         return -1;
@@ -82,7 +84,8 @@ int Application::run()
 
         running_ = true;
 
-        //true even before startup because then after a failure in initization we can call Shutdown()
+        // Mark startup as entered before calling user code. If onStartup()
+        // throws, onShutdown() can still release resources created before it.
         started_ = true;
         onStartup();
 
@@ -103,7 +106,8 @@ int Application::run()
 
             previousFrameTime = currentFrameTime;
 
-            //So the game doesnt get a large delta time after a debugger stop or long resize
+            // Limit unusually long frames. This prevents one large simulation
+            // jump after a debugger pause, window resize, or temporary stall.
             deltaSeconds = std::min(deltaSeconds, 0.25f);
 
             runOneFrame(deltaSeconds);
@@ -126,11 +130,12 @@ int Application::run()
         exitCode_ = -1;
 
         Log::Error(
-            "Unknown error during run."
+            "Application stopped because an unknown non-standard exception was thrown during run()."
         );
     }
 
-    //Free the Renderer resources while the context still active
+    // Release renderer resources before destroying the window because OpenGL
+    // deletion functions require a valid current context.
     if (started_)
     {
         onShutdown();
@@ -180,7 +185,7 @@ void Application::initializePlatform()
     if (glfwInit() != GLFW_TRUE)
     {
         throw std::runtime_error(
-            "Can't initialise GLFW."
+            "Failed to initialize GLFW. Check that its runtime dependencies are available."
         );
     }
 
@@ -214,7 +219,7 @@ void Application::initializePlatform()
     if (window_ == nullptr)
     {
         throw std::runtime_error(
-            "Cant create GLFW window."
+            "Failed to create the GLFW window or its OpenGL 4.6 context. The requested OpenGL version may not be supported."
         );
     }
 
@@ -229,12 +234,14 @@ void Application::initializePlatform()
     )
     {
         throw std::runtime_error(
-            "Cant load in OpenGL with glad."
+            "Failed to load OpenGL functions with GLAD after creating the context."
         );
     }
 
     glfwSwapInterval(specification_.vsync ? 1 : 0);
 
+    // GLFW callbacks only receive a GLFWwindow pointer. The user pointer lets
+    // the static callback find the correct C++ Application instance again.
     glfwSetWindowUserPointer(window_, this);
     glfwSetFramebufferSizeCallback(
         window_,
@@ -244,6 +251,8 @@ void Application::initializePlatform()
     int framebufferWidth = 0;
     int framebufferHeight = 0;
 
+    // Framebuffer pixels may differ from logical window units on high-DPI
+    // displays, so rendering and glViewport use the framebuffer dimensions.
     glfwGetFramebufferSize(
         window_,
         &framebufferWidth,
@@ -316,6 +325,8 @@ void Application::runOneFrame(float deltaSeconds)
 
     if (specification_.width == 0 || specification_.height == 0)
     {
+        // A minimized window can have a zero-sized framebuffer. Wait briefly
+        // instead of rendering invalid frames or consuming an entire CPU core.
         glfwWaitEventsTimeout(0.05);
         return;
     }

@@ -235,7 +235,7 @@ std::string ShaderProgram::readFile(const std::filesystem::path& path)
     if (!file.is_open())
     {
         throw std::runtime_error(
-            "Nem sikerult megnyitni a shader fajlt: "
+            "Failed to open shader source file: "
             + path.string()
         );
     }
@@ -246,7 +246,7 @@ std::string ShaderProgram::readFile(const std::filesystem::path& path)
     if (file.bad())
     {
         throw std::runtime_error(
-            "Hiba tortent a shader fajl olvasasa kozben: "
+            "An I/O error occurred while reading shader source file: "
             + path.string()
         );
     }
@@ -264,11 +264,13 @@ GLuint ShaderProgram::compileStage(
     if (shader == 0)
     {
         throw std::runtime_error(
-            "Nem sikerult letrehozni a(z) " + shaderStageName(stage)
-            + " shader objektumot: " + sourcePath.string()
+            "OpenGL failed to create the " + shaderStageName(stage)
+            + " shader object for source file: " + sourcePath.string()
         );
     }
 
+    // Compilation turns one GLSL source file into a single shader stage. The
+    // program is linked only after every required stage compiles successfully.
     const GLchar* sourcePointer = source.data();
     const GLint sourceLength = static_cast<GLint>(source.size());
     glShaderSource(shader, 1, &sourcePointer, &sourceLength);
@@ -283,8 +285,9 @@ GLuint ShaderProgram::compileStage(
     glDeleteShader(shader);
 
     throw std::runtime_error(
-        "Nem sikerult leforditani a(z) " + shaderStageName(stage)
-        + " shadert: " + sourcePath.string() + "\n" + log
+        "Failed to compile the " + shaderStageName(stage)
+        + " shader: " + sourcePath.string()
+        + "\nOpenGL compiler output:\n" + log
     );
 }
 
@@ -292,8 +295,12 @@ GLuint ShaderProgram::linkProgram(GLuint vertexShader, GLuint fragmentShader)
 {
     const GLuint program = glCreateProgram();
     if (program == 0)
-        throw std::runtime_error("Nem sikerult letrehozni az OpenGL shader programot.");
+        throw std::runtime_error(
+            "OpenGL failed to create a shader program object."
+        );
 
+    // Linking combines the independently compiled stages and verifies that
+    // their inputs and outputs are compatible with one another.
     glAttachShader(program, vertexShader);
     glAttachShader(program, fragmentShader);
     glLinkProgram(program);
@@ -307,7 +314,8 @@ GLuint ShaderProgram::linkProgram(GLuint vertexShader, GLuint fragmentShader)
     glDeleteProgram(program);
 
     throw std::runtime_error(
-        "Nem sikerult linkelni az OpenGL shader programot.\n" + log
+        "Failed to link the OpenGL shader program."
+        "\nOpenGL linker output:\n" + log
     );
 }
 
@@ -319,11 +327,14 @@ GLint ShaderProgram::findUniform(std::string_view name) const
     if (cached != uniformLocations_.end())
         return cached->second;
 
+    // Uniform lookup is relatively expensive, so each successful location is
+    // cached and reused by later set...() calls.
     const GLint location = glGetUniformLocation(programId_, key.c_str());
     if (location == -1)
     {
         throw std::runtime_error(
-            "A uniform nem talalhato vagy nincs hasznalatban: " + key
+            "Uniform '" + key
+            + "' was not found, or OpenGL optimized it out because the shader does not use it."
         );
     }
 

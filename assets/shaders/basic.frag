@@ -4,10 +4,11 @@ out vec4 FragColor;
 
 in vec2 TexCoord;
 
-uniform sampler2D texture1; //0th uniform
-uniform sampler2D texture2; //1th uniform
+uniform sampler2D texture1; // Samples the texture assigned to texture unit 0.
+uniform sampler2D texture2; // Samples the texture assigned to texture unit 1.
 
 void main()
 {
+    // Keep 80% of texture1 and blend in 20% of texture2.
     FragColor = mix(texture(texture1, TexCoord), texture(texture2, TexCoord), 0.2);
 }

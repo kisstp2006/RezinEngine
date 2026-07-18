@@ -4,8 +4,10 @@
 #include <GLFW/glfw3.h>
 
 
-#include <Rezin/Graphics/ShaderProgram.hpp>
 #include <Rezin/Utilities/Log.hpp>
+#include <Rezin/Graphics/Buffer.hpp>
+#include <Rezin/Graphics/VertexArray.hpp>
+#include <Rezin/Graphics/ShaderProgram.hpp>
 #include <Rezin/Assets/Texture/Texture.hpp>
 #include <Rezin/Application/Application.hpp>
 
@@ -144,40 +146,23 @@ namespace
                 shader_->setMat4("view", view_);
                 shader_->setMat4("projection", projection_);
 
-                glGenVertexArrays(1, &vao_);
-                glGenBuffers(1, &vbo_);
-
-                glBindVertexArray(vao_);
-
-                glBindBuffer(GL_ARRAY_BUFFER, vbo_);
-                glBufferData(
-                    GL_ARRAY_BUFFER,
-                    sizeof(cubeVertices),
+                vertexBuffer_ = std::make_unique<VertexBuffer>(
                     cubeVertices,
-                    GL_STATIC_DRAW
+                    sizeof(cubeVertices)
                 );
 
-                glVertexAttribPointer(
-                    0,
-                    3,
-                    GL_FLOAT,
-                    GL_FALSE,
-                    5 * sizeof(float),
-                    reinterpret_cast<void*>(0)
-                );
-                glEnableVertexAttribArray(0);
+                vertexBuffer_->setLayout({
+                    {ShaderDataType::Float3, "aPos"},
+                    {ShaderDataType::Float2, "aTexCoord"}
+                });
 
-                glVertexAttribPointer(
-                    2,
-                    2,
-                    GL_FLOAT,
-                    GL_FALSE,
-                    5 * sizeof(float),
-                    reinterpret_cast<void*>(3 * sizeof(float))
-                );
-                glEnableVertexAttribArray(2);
+                vertexArray_ = std::make_unique<VertexArray>();
 
-                glBindVertexArray(0);
+                vertexArray_->addVertexBuffer(
+                    *vertexBuffer_
+                );
+
+
             }
 
             void onUpdate(float deltaSeconds) override
@@ -213,7 +198,7 @@ namespace
                 texture2_->bind(1);
 
                 shader_->use();
-                glBindVertexArray(vao_);
+                vertexArray_->bind();
 
                 for (unsigned int i = 0; i < 10; ++i)
                 {
@@ -241,23 +226,17 @@ namespace
                     );
                 }
 
-                glBindVertexArray(0);
+                VertexArray::unbind();
+
+
             }
 
             void onShutdown() noexcept override
             {
-                if (vbo_ != 0)
-                {
-                    glDeleteBuffers(1, &vbo_);
-                    vbo_ = 0;
-                }
 
-                if (vao_ != 0)
-                {
-                    glDeleteVertexArrays(1, &vao_);
-                    vao_ = 0;
-                }
+                vertexArray_.reset();
 
+                vertexBuffer_.reset();
 
                 shader_.reset();
                 texture2_.reset();
@@ -307,8 +286,8 @@ namespace
             std::unique_ptr<rezin::Texture2D> texture1_;
             std::unique_ptr<rezin::Texture2D> texture2_;
 
-            GLuint vao_ = 0;
-            GLuint vbo_ = 0;
+            std::unique_ptr<VertexBuffer> vertexBuffer_;
+            std::unique_ptr<VertexArray> vertexArray_;
 
             glm::mat4 model_{1.0f};
             glm::mat4 view_{1.0f};
