@@ -139,10 +139,6 @@ namespace
                     lightPosition_
                 );
 
-                objectShader_->setVec3(
-                    "material.specular",
-                    glm::vec3(0.5f, 0.5f, 0.5f)
-                );
 
                 objectShader_->setFloat("material.shininess", 32.0f);
 
@@ -150,8 +146,12 @@ namespace
                     "assets/texture/missingTexture.png"
                 );
 
-                objectShader_->setInt("material.diffuse", 0);
+                diffuseMap_specular_ = std::make_unique<Texture2D>(
+                    "assets/texture/missingTexture_specular.png"
+                );
 
+                objectShader_->setInt("material.diffuse", 0);
+                objectShader_->setInt("material.specular", 1);
 
 
                 EntityManager& entities = world_.entityManager();
@@ -235,6 +235,9 @@ namespace
 
                 diffuseMap_->bind(0);
 
+                diffuseMap_specular_->bind(1);
+
+
                 objectShader_->use();
                 vertexArray_->bind();
 
@@ -298,6 +301,9 @@ namespace
                     entities.destroyEntity(cameraEntity_);
 
                 cameraEntity_ = {};
+
+                diffuseMap_specular_.reset();
+                diffuseMap_.reset();
 
                 lightVertexArray_.reset();
                 vertexArray_.reset();
@@ -463,8 +469,6 @@ namespace
 
                 objectShader_->setMat4("view", view_);
                 objectShader_->setVec3("viewPos", transform.position);
-                objectShader_->setInt("material.diffuse", 0);
-                                        diffuseMap_->bind(0);
 
                 lightShader_->setMat4("view", view_);
             }
@@ -521,6 +525,7 @@ namespace
             std::unique_ptr<ShaderProgram> objectShader_;
             std::unique_ptr<ShaderProgram> lightShader_;
             std::unique_ptr<Texture2D> diffuseMap_;
+            std::unique_ptr<Texture2D> diffuseMap_specular_;
 
             std::unique_ptr<VertexBuffer> vertexBuffer_;
             std::unique_ptr<VertexArray> vertexArray_;
