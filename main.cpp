@@ -9,6 +9,7 @@
 #include <Rezin/Application/Application.hpp>
 
 #include <exception>
+#include <cmath>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -124,11 +125,10 @@ namespace
                     "assets/shaders/lightCube.frag"
                 );
 
-                // The material defines how the object reflects the white light.
-                // Individual light intensities will be connected in the next
-                // step of the Materials lesson.
+                // Specular light stays white while ambient and diffuse colors
+                // are animated every frame in updateLightColor().
                 objectShader_->setVec3(
-                    "lightColor",
+                    "light.specular",
                     glm::vec3(1.0f)
                 );
                 objectShader_->setVec3(
@@ -221,6 +221,7 @@ namespace
                 updateCameraRotation();
                 updateCameraMovement(deltaSeconds);
                 updateCameraView();
+                updateLightColor(deltaSeconds);
             }
             void onRender() override
             {
@@ -330,6 +331,26 @@ namespace
         private:
             World world_{"Main World"};
             Entity cameraEntity_;
+
+            void updateLightColor(float deltaSeconds)
+            {
+                // Application supplies frame time, so sandbox code does not
+                // need to access GLFW's platform timer directly.
+                elapsedTimeSeconds_ += deltaSeconds;
+
+                glm::vec3 lightColor;
+                lightColor.x = std::sin(elapsedTimeSeconds_ * 2.0f);
+                lightColor.y = std::sin(elapsedTimeSeconds_ * 0.7f);
+                lightColor.z = std::sin(elapsedTimeSeconds_ * 1.3f);
+
+                const glm::vec3 diffuseColor =
+                    lightColor * glm::vec3(0.5f);
+                const glm::vec3 ambientColor =
+                    diffuseColor * glm::vec3(0.2f);
+
+                objectShader_->setVec3("light.ambient", ambientColor);
+                objectShader_->setVec3("light.diffuse", diffuseColor);
+            }
 
             void updateCameraMovement(float deltaSeconds)
             {
@@ -501,6 +522,8 @@ namespace
             glm::mat4 projection_{1.0f};
 
             glm::vec3 lightPosition_{1.2f, 1.0f, 2.0f};
+
+            float elapsedTimeSeconds_ = 0.0f;
 
             float cameraYaw_ = -90.0f;
             float cameraPitch_ = 0.0f;
