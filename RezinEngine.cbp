@@ -84,6 +84,16 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="external/stb/stb_image.h" />
+		<Unit filename="include/Rezin/ECS/Component.hpp" />
+		<Unit filename="include/Rezin/ECS/Components/CameraComponent.hpp" />
+		<Unit filename="include/Rezin/ECS/Components/TransformComponent.hpp" />
+		<Unit filename="include/Rezin/ECS/Detail/ComponentPool.hpp" />
+		<Unit filename="include/Rezin/ECS/Detail/TypeId.hpp" />
+		<Unit filename="include/Rezin/ECS/ECS.hpp" />
+		<Unit filename="include/Rezin/ECS/Entity.hpp" />
+		<Unit filename="include/Rezin/ECS/EntityManager.hpp" />
+		<Unit filename="include/Rezin/ECS/System.hpp" />
+		<Unit filename="include/Rezin/ECS/World.hpp" />
 		<Unit filename="include/Rezin/Graphics/Buffer.hpp" />
 		<Unit filename="include/Rezin/Graphics/ShaderProgram.hpp" />
 		<Unit filename="include/Rezin/Graphics/VertexArray.hpp" />
@@ -94,6 +104,8 @@
 		<Unit filename="main.cpp" />
 		<Unit filename="src/Application/Application.cpp" />
 		<Unit filename="src/Assets/Texture/Texture.cpp" />
+		<Unit filename="src/ECS/EntityManager.cpp" />
+		<Unit filename="src/ECS/World.cpp" />
 		<Unit filename="src/Graphics/Buffer.cpp" />
 		<Unit filename="src/Graphics/ShaderProgram.cpp" />
 		<Unit filename="src/Graphics/VertexArray.cpp" />

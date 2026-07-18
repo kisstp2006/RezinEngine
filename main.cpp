@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 
 
+#include <Rezin/ECS/ECS.hpp>
 #include <Rezin/Input/Input.hpp>
 #include <Rezin/Utilities/Log.hpp>
 #include <Rezin/Graphics/Buffer.hpp>
@@ -134,6 +135,31 @@ namespace
                 shader_->setInt("texture1", 0);
                 shader_->setInt("texture2", 1);
 
+                EntityManager& entities = world_.entityManager();
+                cameraEntity_ = entities.createEntity();
+
+                TransformComponent transform;
+                transform.position = glm::vec3(0.0f, 0.0f, 3.0f);
+
+                entities.addComponentData(
+                    cameraEntity_,
+                    transform
+                );
+
+                CameraComponent camera;
+                camera.projection = CameraProjection::Perspective;
+                camera.verticalFieldOfView = 45.0f;
+                camera.nearClip = 0.1f;
+                camera.farClip = 100.0f;
+                camera.primary = true;
+
+                entities.addComponentData(
+                    cameraEntity_,
+                    camera
+                );
+
+                // The camera entity and both required components must exist
+                // before the view and projection functions query them.
                 updateProjection(width(), height());
                 updateCameraView();
 
@@ -217,6 +243,12 @@ namespace
 
             void onShutdown() noexcept override
             {
+                EntityManager& entities = world_.entityManager();
+
+                if (entities.exists(cameraEntity_))
+                    entities.destroyEntity(cameraEntity_);
+
+                cameraEntity_ = {};
 
                 vertexArray_.reset();
 
@@ -248,74 +280,112 @@ namespace
 
 
         private:
+            World world_{"Main World"};
+            Entity cameraEntity_;
 
             void updateCameraMovement(float deltaSeconds)
             {
-                // Multiplying by delta time keeps movement speed independent
-                // from the number of frames rendered per second.
-                const float movement = cameraMovementSpeed_ * deltaSeconds;
+                TransformComponent& transform =
+                    world_.entityManager()
+                        .getComponentData<TransformComponent>(
+                            cameraEntity_
+                        );
+
+                const float movement =
+                    cameraMovementSpeed_ * deltaSeconds;
+
+                // Convert the camera's local axes into world-space directions.
+                const glm::vec3 cameraFront =
+                    transform.rotation
+                    * glm::vec3(0.0f, 0.0f, -1.0f);
+
+                const glm::vec3 cameraRight =
+                    transform.rotation
+                    * glm::vec3(1.0f, 0.0f, 0.0f);
 
                 if (Input::getKey(KeyCode::W))
-                    cameraPosition_ += cameraFront_ * movement;
+                    transform.position += cameraFront * movement;
 
                 if (Input::getKey(KeyCode::S))
-                    cameraPosition_ -= cameraFront_ * movement;
-
-                // The cross product creates a direction perpendicular to the
-                // camera's forward direction and the world's up direction.
-                const glm::vec3 cameraRight = glm::normalize(
-                    glm::cross(cameraFront_, cameraWorldUp_)
-                );
+                    transform.position -= cameraFront * movement;
 
                 if (Input::getKey(KeyCode::A))
-                    cameraPosition_ -= cameraRight * movement;
+                    transform.position -= cameraRight * movement;
 
                 if (Input::getKey(KeyCode::D))
-                    cameraPosition_ += cameraRight * movement;
+                    transform.position += cameraRight * movement;
             }
 
             void updateCameraRotation()
             {
-                // Until cursor locking exists, holding the right mouse button
-                // prevents normal cursor movement from rotating the camera.
                 if (!Input::getMouseButton(MouseButton::Right))
                     return;
 
-                const glm::vec2 mouseMovement = Input::mouseDelta();
+                const glm::vec2 mouseMovement =
+                    Input::mouseDelta();
 
-                // Mouse delta already represents movement during this frame,
-                // so it must not be multiplied by delta time.
-                cameraYaw_ += mouseMovement.x * mouseSensitivity_;
-                cameraPitch_ += mouseMovement.y * mouseSensitivity_;
+                cameraYaw_ +=
+                    mouseMovement.x * mouseSensitivity_;
 
-                // Avoid looking exactly straight up or down, where the view
-                // direction becomes parallel to the up vector and can flip.
+                cameraPitch_ +=
+                    mouseMovement.y * mouseSensitivity_;
+
                 cameraPitch_ = glm::clamp(
                     cameraPitch_,
                     -89.0f,
                     89.0f
                 );
 
-                glm::vec3 direction;
-                direction.x =
+                glm::vec3 cameraDirection;
+
+                cameraDirection.x =
                     glm::cos(glm::radians(cameraYaw_))
                     * glm::cos(glm::radians(cameraPitch_));
-                direction.y = glm::sin(glm::radians(cameraPitch_));
-                direction.z =
+
+                cameraDirection.y =
+                    glm::sin(glm::radians(cameraPitch_));
+
+                cameraDirection.z =
                     glm::sin(glm::radians(cameraYaw_))
                     * glm::cos(glm::radians(cameraPitch_));
 
-                cameraFront_ = glm::normalize(direction);
+                cameraDirection =
+                    glm::normalize(cameraDirection);
+
+                TransformComponent& transform =
+                    world_.entityManager()
+                        .getComponentData<TransformComponent>(
+                            cameraEntity_
+                        );
+
+                // Build a quaternion that points the local forward axis toward
+                // the calculated world-space direction.
+                transform.rotation = glm::quatLookAtRH(
+                    cameraDirection,
+                    glm::vec3(0.0f, 1.0f, 0.0f)
+                );
             }
 
             void updateCameraView()
             {
-                // lookAt expects a position, a point to look toward, and an up
-                // direction. position + front produces that target point.
+                const TransformComponent& transform =
+                    world_.entityManager()
+                        .getComponentData<TransformComponent>(
+                            cameraEntity_
+                        );
+
+                const glm::vec3 cameraFront =
+                    transform.rotation
+                    * glm::vec3(0.0f, 0.0f, -1.0f);
+
+                const glm::vec3 cameraUp =
+                    transform.rotation
+                    * glm::vec3(0.0f, 1.0f, 0.0f);
+
                 view_ = glm::lookAt(
-                    cameraPosition_,
-                    cameraPosition_ + cameraFront_,
-                    cameraWorldUp_
+                    transform.position,
+                    transform.position + cameraFront,
+                    cameraUp
                 );
 
                 shader_->setMat4("view", view_);
@@ -329,18 +399,50 @@ namespace
                 if (framebufferHeight == 0)
                     return;
 
-                projection_ = glm::perspective(
-                    glm::radians(45.0f),
+                const CameraComponent& camera =
+                    world_.entityManager()
+                        .getComponentData<CameraComponent>(
+                            cameraEntity_
+                        );
+
+                const float aspectRatio =
                     static_cast<float>(framebufferWidth)
-                        / static_cast<float>(framebufferHeight),
-                    0.1f,
-                    100.0f
-                );
+                    / static_cast<float>(framebufferHeight);
+
+                if (
+                    camera.projection
+                    == CameraProjection::Perspective
+                )
+                {
+                    projection_ = glm::perspective(
+                        glm::radians(camera.verticalFieldOfView),
+                        aspectRatio,
+                        camera.nearClip,
+                        camera.farClip
+                    );
+                }
+                else
+                {
+                    const float halfHeight =
+                        camera.orthographicSize * 0.5f;
+
+                    const float halfWidth =
+                        halfHeight * aspectRatio;
+
+                    projection_ = glm::ortho(
+                        -halfWidth,
+                        halfWidth,
+                        -halfHeight,
+                        halfHeight,
+                        camera.nearClip,
+                        camera.farClip
+                    );
+                }
             }
 
-            std::unique_ptr<rezin::ShaderProgram> shader_;
-            std::unique_ptr<rezin::Texture2D> texture1_;
-            std::unique_ptr<rezin::Texture2D> texture2_;
+            std::unique_ptr<ShaderProgram> shader_;
+            std::unique_ptr<Texture2D> texture1_;
+            std::unique_ptr<Texture2D> texture2_;
 
             std::unique_ptr<VertexBuffer> vertexBuffer_;
             std::unique_ptr<VertexArray> vertexArray_;
@@ -348,16 +450,12 @@ namespace
             glm::mat4 view_{1.0f};
             glm::mat4 projection_{1.0f};
 
-            glm::vec3 cameraPosition_{0.0f, 0.0f, 3.0f};
-            glm::vec3 cameraFront_{0.0f, 0.0f, -1.0f};
-            glm::vec3 cameraWorldUp_{0.0f, 1.0f, 0.0f};
-
             float cameraYaw_ = -90.0f;
             float cameraPitch_ = 0.0f;
 
             static constexpr float cameraMovementSpeed_ = 2.5f;
             static constexpr float mouseSensitivity_ = 0.1f;
-        };
+    };
 
 }
 
@@ -367,7 +465,7 @@ int main()
     {
         ApplicationSpecification specification;
         specification.name="Rezin Sandbox";
-        specification.resizable=false;
+        specification.resizable=true;
         specification.vsync=true;
         specification.width = 1280;
         specification.height = 720;
