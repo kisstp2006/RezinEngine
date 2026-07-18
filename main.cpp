@@ -75,18 +75,26 @@ namespace
         -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
     };
 
-    glm::vec3 cubePositions[] = {
-    glm::vec3( 0.0f,  0.0f,  0.0f),
-    glm::vec3( 2.0f,  5.0f, -15.0f),
-    glm::vec3(-1.5f, -2.2f, -2.5f),
-    glm::vec3(-3.8f, -2.0f, -12.3f),
-    glm::vec3( 2.4f, -0.4f, -3.5f),
-    glm::vec3(-1.7f,  3.0f, -7.5f),
-    glm::vec3( 1.3f, -2.0f, -2.5f),
-    glm::vec3( 1.5f,  2.0f, -2.5f),
-    glm::vec3( 1.5f,  0.2f, -1.5f),
-    glm::vec3(-1.3f,  1.0f, -1.5f)
-};
+    const glm::vec3 cubePositions[] = {
+        glm::vec3( 0.0f,  0.0f,   0.0f),
+        glm::vec3( 2.0f,  5.0f, -15.0f),
+        glm::vec3(-1.5f, -2.2f,  -2.5f),
+        glm::vec3(-3.8f, -2.0f, -12.3f),
+        glm::vec3( 2.4f, -0.4f,  -3.5f),
+        glm::vec3(-1.7f,  3.0f,  -7.5f),
+        glm::vec3( 1.3f, -2.0f,  -2.5f),
+        glm::vec3( 1.5f,  2.0f,  -2.5f),
+        glm::vec3( 1.5f,  0.2f,  -1.5f),
+        glm::vec3(-1.3f,  1.0f,  -1.5f)
+    };
+
+    constexpr unsigned int pointLightCount = 4;
+    const glm::vec3 pointLightPositions[pointLightCount] = {
+        glm::vec3( 0.7f,  0.2f,   2.0f),
+        glm::vec3( 2.3f, -3.3f,  -4.0f),
+        glm::vec3(-4.0f,  2.0f, -12.0f),
+        glm::vec3( 0.0f,  0.0f,  -3.0f)
+    };
 
 
 
@@ -128,13 +136,6 @@ namespace
                     "assets/shaders/lightCube.frag"
                 );
 
-                // Specular light stays white while ambient and diffuse colors
-                // are animated every frame in updateLightColor().
-                objectShader_->setVec3(
-                    "light.specular",
-                    glm::vec3(1.0f)
-                );
-
                 objectShader_->setFloat("material.shininess", 32.0f);
 
                 diffuseMap_ = std::make_unique<Texture2D>(
@@ -147,6 +148,78 @@ namespace
 
                 objectShader_->setInt("material.diffuse", 0);
                 objectShader_->setInt("material.specular", 1);
+
+                // A distant sun-like light affects the whole scene equally.
+                objectShader_->setVec3(
+                    "dirLight.direction",
+                    glm::vec3(-0.2f, -1.0f, -0.3f)
+                );
+                objectShader_->setVec3(
+                    "dirLight.ambient",
+                    glm::vec3(0.05f)
+                );
+                objectShader_->setVec3(
+                    "dirLight.diffuse",
+                    glm::vec3(0.4f)
+                );
+                objectShader_->setVec3(
+                    "dirLight.specular",
+                    glm::vec3(0.5f)
+                );
+
+                // Every point light uses the same attenuation and color
+                // properties, but owns an independent world-space position.
+                for (unsigned int index = 0; index < pointLightCount; ++index)
+                {
+                    const std::string prefix =
+                        "pointLights[" + std::to_string(index) + "].";
+
+                    objectShader_->setVec3(
+                        prefix + "position",
+                        pointLightPositions[index]
+                    );
+                    objectShader_->setFloat(prefix + "constant", 1.0f);
+                    objectShader_->setFloat(prefix + "linear", 0.09f);
+                    objectShader_->setFloat(prefix + "quadratic", 0.032f);
+                    objectShader_->setVec3(
+                        prefix + "ambient",
+                        glm::vec3(0.05f)
+                    );
+                    objectShader_->setVec3(
+                        prefix + "diffuse",
+                        glm::vec3(0.8f)
+                    );
+                    objectShader_->setVec3(
+                        prefix + "specular",
+                        glm::vec3(1.0f)
+                    );
+                }
+
+                // Position and direction are updated from the ECS camera every
+                // frame. The remaining spotlight properties are static.
+                objectShader_->setVec3(
+                    "spotLight.ambient",
+                    glm::vec3(0.0f)
+                );
+                objectShader_->setVec3(
+                    "spotLight.diffuse",
+                    glm::vec3(1.0f)
+                );
+                objectShader_->setVec3(
+                    "spotLight.specular",
+                    glm::vec3(1.0f)
+                );
+                objectShader_->setFloat("spotLight.constant", 1.0f);
+                objectShader_->setFloat("spotLight.linear", 0.09f);
+                objectShader_->setFloat("spotLight.quadratic", 0.032f);
+                objectShader_->setFloat(
+                    "spotLight.cutOff",
+                    std::cos(glm::radians(12.5f))
+                );
+                objectShader_->setFloat(
+                    "spotLight.outerCutOff",
+                    std::cos(glm::radians(15.0f))
+                );
 
 
                 EntityManager& entities = world_.entityManager();
@@ -179,14 +252,6 @@ namespace
 
                 objectShader_->setMat4("projection", projection_);
                 lightShader_->setMat4("projection", projection_);
-                objectShader_->setFloat("light.constant", 1.0f);
-                objectShader_->setFloat("light.linear", 0.09f);
-                objectShader_->setFloat("light.quadratic", 0.032f);
-
-                objectShader_->setVec3(
-                    "light.position",
-                    lightPosition_
-                );
 
                 vertexBuffer_ = std::make_unique<VertexBuffer>(
                     cubeVertices,
@@ -270,26 +335,31 @@ namespace
                     );
                 }
 
-                // Render a small white cube at the light's world-space position.
-                glm::mat4 lightModel{1.0f};
-                lightModel = glm::translate(
-                    lightModel,
-                    lightPosition_
-                );
-                lightModel = glm::scale(
-                    lightModel,
-                    glm::vec3(0.2f)
-                );
-
                 lightShader_->use();
-                lightShader_->setMat4("model", lightModel);
                 lightVertexArray_->bind();
 
-                glDrawArrays(
-                    GL_TRIANGLES,
-                    0,
-                    36
-                );
+                // Each point light gets a small visible marker cube. The
+                // directional light and camera flashlight have no marker.
+                for (unsigned int index = 0; index < pointLightCount; ++index)
+                {
+                    glm::mat4 lightModel{1.0f};
+                    lightModel = glm::translate(
+                        lightModel,
+                        pointLightPositions[index]
+                    );
+                    lightModel = glm::scale(
+                        lightModel,
+                        glm::vec3(0.2f)
+                    );
+
+                    lightShader_->setMat4("model", lightModel);
+
+                    glDrawArrays(
+                        GL_TRIANGLES,
+                        0,
+                        36
+                    );
+                }
 
                 VertexArray::unbind();
 
@@ -361,8 +431,8 @@ namespace
                 const glm::vec3 ambientColor =
                     diffuseColor * glm::vec3(0.2f);
 
-                objectShader_->setVec3("light.ambient", ambientColor);
-                objectShader_->setVec3("light.diffuse", diffuseColor);
+                objectShader_->setVec3("spotLight.ambient", ambientColor);
+                objectShader_->setVec3("spotLight.diffuse", diffuseColor);
             }
 
             void updateCameraMovement(float deltaSeconds)
@@ -472,6 +542,11 @@ namespace
 
                 objectShader_->setMat4("view", view_);
                 objectShader_->setVec3("viewPos", transform.position);
+                objectShader_->setVec3(
+                    "spotLight.position",
+                    transform.position
+                );
+                objectShader_->setVec3("spotLight.direction", cameraFront);
 
                 lightShader_->setMat4("view", view_);
             }
@@ -536,8 +611,6 @@ namespace
 
             glm::mat4 view_{1.0f};
             glm::mat4 projection_{1.0f};
-
-            glm::vec3 lightPosition_{1.2f, 1.0f, 2.0f};
 
             float elapsedTimeSeconds_ = 0.0f;
 
