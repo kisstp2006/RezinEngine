@@ -124,17 +124,34 @@ namespace
                     "assets/shaders/lightCube.frag"
                 );
 
-                // Coral-colored objects reflecting a white light. These two
-                // uniforms are the starting point of the Basic Lighting lesson.
-                objectShader_->setVec3(
-                    "objectColor",
-                    glm::vec3(1.0f, 0.5f, 0.31f)
-                );
+                // The material defines how the object reflects the white light.
+                // Individual light intensities will be connected in the next
+                // step of the Materials lesson.
                 objectShader_->setVec3(
                     "lightColor",
                     glm::vec3(1.0f)
                 );
-                objectShader_->setVec3("lightPos", lightPosition_); //if we want to move the light put it into render
+                objectShader_->setVec3(
+                    "light.position",
+                    lightPosition_
+                );
+
+                objectShader_->setVec3(
+                    "material.ambient",
+                    glm::vec3(1.0f, 0.5f, 0.31f)
+                );
+
+                objectShader_->setVec3(
+                    "material.diffuse",
+                    glm::vec3(1.0f, 0.5f, 0.31f)
+                );
+
+                objectShader_->setVec3(
+                    "material.specular",
+                    glm::vec3(0.5f, 0.5f, 0.5f)
+                );
+
+                objectShader_->setFloat("material.shininess", 32.0f);
 
                 EntityManager& entities = world_.entityManager();
                 cameraEntity_ = entities.createEntity();
