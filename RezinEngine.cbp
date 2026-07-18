@@ -89,6 +89,7 @@
 		<Unit filename="include/Rezin/Graphics/VertexArray.hpp" />
 		<Unit filename="include/Rezin/Assets/Texture/Texture.hpp" />
 		<Unit filename="include/Rezin/Application/Application.hpp" />
+		<Unit filename="include/Rezin/Input/Input.hpp" />
 		<Unit filename="include/Rezin/Utilities/Log.hpp" />
 		<Unit filename="main.cpp" />
 		<Unit filename="src/Application/Application.cpp" />
@@ -96,6 +97,7 @@
 		<Unit filename="src/Graphics/Buffer.cpp" />
 		<Unit filename="src/Graphics/ShaderProgram.cpp" />
 		<Unit filename="src/Graphics/VertexArray.cpp" />
+		<Unit filename="src/Input/Input.cpp" />
 		<Unit filename="src/Utilities/Log.cpp" />
 		<Unit filename="thirdparty/glm/copying.txt">
 			<Option compile="0" />

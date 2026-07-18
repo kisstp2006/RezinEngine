@@ -1,9 +1,7 @@
 #include <glad/glad.h>
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 
-
+#include <Rezin/Input/Input.hpp>
 #include <Rezin/Utilities/Log.hpp>
 #include <Rezin/Graphics/Buffer.hpp>
 #include <Rezin/Graphics/VertexArray.hpp>
@@ -24,7 +22,6 @@
 #include <utility>
 
 
-using namespace std;
 using namespace rezin;
 
 namespace
@@ -86,22 +83,6 @@ namespace
     glm::vec3(-1.3f,  1.0f, -1.5f)
 };
 
-    //Camera position
-    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
-    //Camera direction
-    glm::vec3 cameraTarget = glm::vec3(0.0f, 0.0f, 0.0f);
-    glm::vec3 cameraDirection = glm::normalize(cameraPos - cameraTarget);
-    //Right axis
-    glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-    glm::vec3 cameraRight = glm::normalize(glm::cross(up, cameraDirection));
-    //Up Axis
-    glm::vec3 cameraUp = glm::cross(cameraDirection, cameraRight);
-    //Look At
-    glm::mat4 view = glm::lookAt(
-        glm::vec3(0.0f, 0.0f, 3.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f)
-    );
 
 
     class SandboxApplication final : public Application
@@ -153,15 +134,9 @@ namespace
                 shader_->setInt("texture1", 0);
                 shader_->setInt("texture2", 1);
 
-                view_ = glm::translate(
-                    glm::mat4(1.0f),
-                    glm::vec3(0.0f, 0.0f, -3.0f)
-                );
-
                 updateProjection(width(), height());
+                updateCameraView();
 
-                shader_->setMat4("model", model_);
-                shader_->setMat4("view", view_);
                 shader_->setMat4("projection", projection_);
 
                 vertexBuffer_ = std::make_unique<VertexBuffer>(
@@ -185,32 +160,15 @@ namespace
 
             void onUpdate(float deltaSeconds) override
             {
-                if (
-                    glfwGetKey(nativeWindow(), GLFW_KEY_ESCAPE)
-                    == GLFW_PRESS
-                )
+                if (Input::getKeyDown(KeyCode::Escape))
                 {
                     requestQuit();
                     return;
                 }
 
-                elapsedTime_ += deltaSeconds;
-
-                model_ = glm::rotate(
-                    glm::mat4(1.0f),
-                    elapsedTime_ * glm::radians(50.0f),
-                    glm::vec3(0.5f, 1.0f, 0.0f)
-                );
-
-
-                const float radius = 10.0f;
-                float camX = sin(glfwGetTime()/10) * radius;
-                float camZ = cos(glfwGetTime()/10) * radius;
-
-                view_ = glm::lookAt(glm::vec3(camX, 0.0, camZ), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 1.0, 0.0));
-
-                shader_->setMat4("model", model_);
-                shader_->setMat4("view", view_);
+                updateCameraRotation();
+                updateCameraMovement(deltaSeconds);
+                updateCameraView();
             }
             void onRender() override
             {
@@ -291,6 +249,78 @@ namespace
 
         private:
 
+            void updateCameraMovement(float deltaSeconds)
+            {
+                // Multiplying by delta time keeps movement speed independent
+                // from the number of frames rendered per second.
+                const float movement = cameraMovementSpeed_ * deltaSeconds;
+
+                if (Input::getKey(KeyCode::W))
+                    cameraPosition_ += cameraFront_ * movement;
+
+                if (Input::getKey(KeyCode::S))
+                    cameraPosition_ -= cameraFront_ * movement;
+
+                // The cross product creates a direction perpendicular to the
+                // camera's forward direction and the world's up direction.
+                const glm::vec3 cameraRight = glm::normalize(
+                    glm::cross(cameraFront_, cameraWorldUp_)
+                );
+
+                if (Input::getKey(KeyCode::A))
+                    cameraPosition_ -= cameraRight * movement;
+
+                if (Input::getKey(KeyCode::D))
+                    cameraPosition_ += cameraRight * movement;
+            }
+
+            void updateCameraRotation()
+            {
+                // Until cursor locking exists, holding the right mouse button
+                // prevents normal cursor movement from rotating the camera.
+                if (!Input::getMouseButton(MouseButton::Right))
+                    return;
+
+                const glm::vec2 mouseMovement = Input::mouseDelta();
+
+                // Mouse delta already represents movement during this frame,
+                // so it must not be multiplied by delta time.
+                cameraYaw_ += mouseMovement.x * mouseSensitivity_;
+                cameraPitch_ += mouseMovement.y * mouseSensitivity_;
+
+                // Avoid looking exactly straight up or down, where the view
+                // direction becomes parallel to the up vector and can flip.
+                cameraPitch_ = glm::clamp(
+                    cameraPitch_,
+                    -89.0f,
+                    89.0f
+                );
+
+                glm::vec3 direction;
+                direction.x =
+                    glm::cos(glm::radians(cameraYaw_))
+                    * glm::cos(glm::radians(cameraPitch_));
+                direction.y = glm::sin(glm::radians(cameraPitch_));
+                direction.z =
+                    glm::sin(glm::radians(cameraYaw_))
+                    * glm::cos(glm::radians(cameraPitch_));
+
+                cameraFront_ = glm::normalize(direction);
+            }
+
+            void updateCameraView()
+            {
+                // lookAt expects a position, a point to look toward, and an up
+                // direction. position + front produces that target point.
+                view_ = glm::lookAt(
+                    cameraPosition_,
+                    cameraPosition_ + cameraFront_,
+                    cameraWorldUp_
+                );
+
+                shader_->setMat4("view", view_);
+            }
+
             void updateProjection(
                 std::uint32_t framebufferWidth,
                 std::uint32_t framebufferHeight
@@ -315,16 +345,21 @@ namespace
             std::unique_ptr<VertexBuffer> vertexBuffer_;
             std::unique_ptr<VertexArray> vertexArray_;
 
-            glm::mat4 model_{1.0f};
             glm::mat4 view_{1.0f};
             glm::mat4 projection_{1.0f};
 
-            float elapsedTime_ = 0.0f;
+            glm::vec3 cameraPosition_{0.0f, 0.0f, 3.0f};
+            glm::vec3 cameraFront_{0.0f, 0.0f, -1.0f};
+            glm::vec3 cameraWorldUp_{0.0f, 1.0f, 0.0f};
+
+            float cameraYaw_ = -90.0f;
+            float cameraPitch_ = 0.0f;
+
+            static constexpr float cameraMovementSpeed_ = 2.5f;
+            static constexpr float mouseSensitivity_ = 0.1f;
         };
 
 }
-
-
 
 int main()
 {

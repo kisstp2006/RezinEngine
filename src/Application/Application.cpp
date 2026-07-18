@@ -1,4 +1,5 @@
 #include <Rezin/Application/Application.hpp>
+#include <Rezin/Input/Input.hpp>
 #include <Rezin/Utilities/Log.hpp>
 
 #include <glad/glad.h>
@@ -248,6 +249,8 @@ void Application::initializePlatform()
         framebufferSizeCallback
     );
 
+    Input::initialize(window_);
+
     int framebufferWidth = 0;
     int framebufferHeight = 0;
 
@@ -289,6 +292,8 @@ void Application::shutdownPlatform() noexcept
 {
     if (window_ != nullptr)
     {
+        Input::shutdown();
+
         glfwSetFramebufferSizeCallback(window_, nullptr);
         glfwSetWindowUserPointer(window_, nullptr);
 
@@ -315,6 +320,7 @@ void Application::shutdownPlatform() noexcept
 void Application::runOneFrame(float deltaSeconds)
 {
     glfwPollEvents();
+    Input::update();
 
     if (glfwWindowShouldClose(window_) == GLFW_TRUE)
     {
