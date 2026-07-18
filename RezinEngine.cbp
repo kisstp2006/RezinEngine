@@ -104,6 +104,7 @@
 		<Unit filename="include/Rezin/ECS/Entity.hpp" />
 		<Unit filename="include/Rezin/ECS/EntityManager.hpp" />
 		<Unit filename="include/Rezin/ECS/System.hpp" />
+		<Unit filename="include/Rezin/ECS/Systems/LightSystem.hpp" />
 		<Unit filename="include/Rezin/ECS/World.hpp" />
 		<Unit filename="include/Rezin/Graphics/Buffer.hpp" />
 		<Unit filename="include/Rezin/Graphics/ShaderProgram.hpp" />
@@ -116,6 +117,7 @@
 		<Unit filename="src/Application/Application.cpp" />
 		<Unit filename="src/Assets/Texture/Texture.cpp" />
 		<Unit filename="src/ECS/EntityManager.cpp" />
+		<Unit filename="src/ECS/Systems/LightSystem.cpp" />
 		<Unit filename="src/ECS/World.cpp" />
 		<Unit filename="src/Graphics/Buffer.cpp" />
 		<Unit filename="src/Graphics/ShaderProgram.cpp" />

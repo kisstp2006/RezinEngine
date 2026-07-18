@@ -21,8 +21,8 @@ enum class LightType : std::uint8_t
 //
 //     TransformComponent + LightComponent
 //
-// A future LightSystem or renderer will read these values and upload the
-// appropriate directional, point, or spot-light data to shaders.
+// LightSystem reads these values and uploads the appropriate directional,
+// point, or spot-light data to the lighting shader.
 struct LightComponent
 {
     LightType type = LightType::Point;
@@ -47,8 +47,11 @@ struct LightComponent
     float innerConeAngle = 12.5f;
     float outerConeAngle = 15.0f;
 
+    // Disabled lights remain attached to their entities but are skipped by the
+    // LightSystem. This avoids removing and re-adding the component at runtime.
     bool enabled = true;
-    bool castsShadows = false;
+
+    //bool castsShadows = false;
 };
 
 }

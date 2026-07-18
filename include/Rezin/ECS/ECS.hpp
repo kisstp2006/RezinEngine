@@ -9,4 +9,5 @@
 #include <Rezin/ECS/Entity.hpp>
 #include <Rezin/ECS/EntityManager.hpp>
 #include <Rezin/ECS/System.hpp>
+#include <Rezin/ECS/Systems/LightSystem.hpp>
 #include <Rezin/ECS/World.hpp>

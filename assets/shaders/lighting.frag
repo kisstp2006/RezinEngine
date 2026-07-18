@@ -53,6 +53,11 @@ uniform PointLight pointLights[NR_POINT_LIGHTS];
 uniform SpotLight spotLight;
 uniform vec3 viewPos;
 
+uniform bool hasDirectionalLight;
+uniform bool hasSpotLight;
+uniform int pointLightCount;
+
+
 layout (location = 0) out vec4 fragmentColor;
 
 in vec3 FragPos;
@@ -79,10 +84,14 @@ void main()
 {
     const vec3 normal = normalize(Normal);
     const vec3 viewDirection = normalize(viewPos - FragPos);
+    vec3 result = vec3(0.0);
 
-    vec3 result = calcDirLight(dirLight, normal, viewDirection);
+    if (hasDirectionalLight)
+    {
+        result += calcDirLight(dirLight, normal, viewDirection);
+    }
 
-    for (int index = 0; index < NR_POINT_LIGHTS; ++index)
+    for (int index = 0; index < pointLightCount; ++index)
     {
         result += calcPointLight(
             pointLights[index],
@@ -92,12 +101,15 @@ void main()
         );
     }
 
-    result += calcSpotLight(
-        spotLight,
-        normal,
-        FragPos,
-        viewDirection
-    );
+    if (hasSpotLight)
+    {
+        result += calcSpotLight(
+            spotLight,
+            normal,
+            FragPos,
+            viewDirection
+        );
+    }
 
     fragmentColor = vec4(result, 1.0);
 }

@@ -15,6 +15,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <array>
 #include <string>
 #include <memory>
 #include <utility>
@@ -149,79 +150,6 @@ namespace
                 objectShader_->setInt("material.diffuse", 0);
                 objectShader_->setInt("material.specular", 1);
 
-                // A distant sun-like light affects the whole scene equally.
-                objectShader_->setVec3(
-                    "dirLight.direction",
-                    glm::vec3(-0.2f, -1.0f, -0.3f)
-                );
-                objectShader_->setVec3(
-                    "dirLight.ambient",
-                    glm::vec3(0.05f)
-                );
-                objectShader_->setVec3(
-                    "dirLight.diffuse",
-                    glm::vec3(0.4f)
-                );
-                objectShader_->setVec3(
-                    "dirLight.specular",
-                    glm::vec3(0.5f)
-                );
-
-                // Every point light uses the same attenuation and color
-                // properties, but owns an independent world-space position.
-                for (unsigned int index = 0; index < pointLightCount; ++index)
-                {
-                    const std::string prefix =
-                        "pointLights[" + std::to_string(index) + "].";
-
-                    objectShader_->setVec3(
-                        prefix + "position",
-                        pointLightPositions[index]
-                    );
-                    objectShader_->setFloat(prefix + "constant", 1.0f);
-                    objectShader_->setFloat(prefix + "linear", 0.09f);
-                    objectShader_->setFloat(prefix + "quadratic", 0.032f);
-                    objectShader_->setVec3(
-                        prefix + "ambient",
-                        glm::vec3(0.05f)
-                    );
-                    objectShader_->setVec3(
-                        prefix + "diffuse",
-                        glm::vec3(0.8f)
-                    );
-                    objectShader_->setVec3(
-                        prefix + "specular",
-                        glm::vec3(1.0f)
-                    );
-                }
-
-                // Position and direction are updated from the ECS camera every
-                // frame. The remaining spotlight properties are static.
-                objectShader_->setVec3(
-                    "spotLight.ambient",
-                    glm::vec3(0.0f)
-                );
-                objectShader_->setVec3(
-                    "spotLight.diffuse",
-                    glm::vec3(1.0f)
-                );
-                objectShader_->setVec3(
-                    "spotLight.specular",
-                    glm::vec3(1.0f)
-                );
-                objectShader_->setFloat("spotLight.constant", 1.0f);
-                objectShader_->setFloat("spotLight.linear", 0.09f);
-                objectShader_->setFloat("spotLight.quadratic", 0.032f);
-                objectShader_->setFloat(
-                    "spotLight.cutOff",
-                    std::cos(glm::radians(12.5f))
-                );
-                objectShader_->setFloat(
-                    "spotLight.outerCutOff",
-                    std::cos(glm::radians(15.0f))
-                );
-
-
                 EntityManager& entities = world_.entityManager();
                 cameraEntity_ = entities.createEntity();
 
@@ -244,6 +172,69 @@ namespace
                     cameraEntity_,
                     camera
                 );
+
+                // Adding a spot light to the camera entity makes the light use
+                // the same position and rotation as the camera automatically.
+                LightComponent cameraLight;
+                cameraLight.type = LightType::Spot;
+                cameraLight.ambientIntensity = 0.0f;
+                cameraLight.diffuseIntensity = 1.0f;
+                cameraLight.specularIntensity = 1.0f;
+
+                entities.addComponentData(
+                    cameraEntity_,
+                    cameraLight
+                );
+
+                directionalLightEntity_ = entities.createEntity();
+
+                TransformComponent directionalTransform;
+                directionalTransform.rotation = glm::quatLookAtRH(
+                    glm::normalize(glm::vec3(-0.2f, -1.0f, -0.3f)),
+                    glm::vec3(0.0f, 1.0f, 0.0f)
+                );
+
+                LightComponent directionalLight;
+                directionalLight.type = LightType::Directional;
+                directionalLight.ambientIntensity = 0.05f;
+                directionalLight.diffuseIntensity = 0.4f;
+                directionalLight.specularIntensity = 0.5f;
+
+                entities.addComponentData(
+                    directionalLightEntity_,
+                    directionalTransform
+                );
+                entities.addComponentData(
+                    directionalLightEntity_,
+                    directionalLight
+                );
+
+                for (std::size_t index = 0; index < pointLightCount; ++index)
+                {
+                    pointLightEntities_[index] = entities.createEntity();
+
+                    TransformComponent pointTransform;
+                    pointTransform.position = pointLightPositions[index];
+
+                    LightComponent pointLight;
+                    pointLight.type = LightType::Point;
+                    pointLight.ambientIntensity = 0.05f;
+                    pointLight.diffuseIntensity = 0.8f;
+                    pointLight.specularIntensity = 1.0f;
+
+                    entities.addComponentData(
+                        pointLightEntities_[index],
+                        pointTransform
+                    );
+                    entities.addComponentData(
+                        pointLightEntities_[index],
+                        pointLight
+                    );
+                }
+
+                // World owns the system. The shader must outlive the system
+                // because LightSystem stores a reference to it.
+                world_.getOrCreateSystem<LightSystem>(*objectShader_);
 
                 // The camera entity and both required components must exist
                 // before the view and projection functions query them.
@@ -292,6 +283,10 @@ namespace
                 updateCameraMovement(deltaSeconds);
                 updateCameraView();
                 updateLightColor(deltaSeconds);
+
+                // Systems run after gameplay has updated component data and
+                // before rendering consumes the resulting shader uniforms.
+                world_.update(deltaSeconds);
             }
             void onRender() override
             {
@@ -342,10 +337,16 @@ namespace
                 // directional light and camera flashlight have no marker.
                 for (unsigned int index = 0; index < pointLightCount; ++index)
                 {
+                    const TransformComponent& lightTransform =
+                        world_.entityManager()
+                            .getComponentData<TransformComponent>(
+                                pointLightEntities_[index]
+                            );
+
                     glm::mat4 lightModel{1.0f};
                     lightModel = glm::translate(
                         lightModel,
-                        pointLightPositions[index]
+                        lightTransform.position
                     );
                     lightModel = glm::scale(
                         lightModel,
@@ -370,10 +371,27 @@ namespace
             {
                 EntityManager& entities = world_.entityManager();
 
+                if (entities.exists(directionalLightEntity_))
+                    entities.destroyEntity(directionalLightEntity_);
+
+                directionalLightEntity_ = {};
+
+                for (Entity& pointLightEntity : pointLightEntities_)
+                {
+                    if (entities.exists(pointLightEntity))
+                        entities.destroyEntity(pointLightEntity);
+
+                    pointLightEntity = {};
+                }
+
                 if (entities.exists(cameraEntity_))
                     entities.destroyEntity(cameraEntity_);
 
                 cameraEntity_ = {};
+
+                // Destroy systems before releasing resources referenced by
+                // those systems, including objectShader_.
+                world_.shutdown();
 
                 diffuseMap_specular_.reset();
                 diffuseMap_.reset();
@@ -414,6 +432,8 @@ namespace
         private:
             World world_{"Main World"};
             Entity cameraEntity_;
+            Entity directionalLightEntity_;
+            std::array<Entity, pointLightCount> pointLightEntities_{};
 
             void updateLightColor(float deltaSeconds)
             {
@@ -426,13 +446,13 @@ namespace
                 lightColor.y = std::sin(elapsedTimeSeconds_ * 0.7f);
                 lightColor.z = std::sin(elapsedTimeSeconds_ * 1.3f);
 
-                const glm::vec3 diffuseColor =
-                    lightColor * glm::vec3(0.5f);
-                const glm::vec3 ambientColor =
-                    diffuseColor * glm::vec3(0.2f);
+                // Change component data instead of talking to the shader. The
+                // LightSystem reads this value later in the same frame.
+                LightComponent& cameraLight =
+                    world_.entityManager()
+                        .getComponentData<LightComponent>(cameraEntity_);
 
-                objectShader_->setVec3("spotLight.ambient", ambientColor);
-                objectShader_->setVec3("spotLight.diffuse", diffuseColor);
+                cameraLight.color = lightColor;
             }
 
             void updateCameraMovement(float deltaSeconds)
@@ -542,11 +562,6 @@ namespace
 
                 objectShader_->setMat4("view", view_);
                 objectShader_->setVec3("viewPos", transform.position);
-                objectShader_->setVec3(
-                    "spotLight.position",
-                    transform.position
-                );
-                objectShader_->setVec3("spotLight.direction", cameraFront);
 
                 lightShader_->setMat4("view", view_);
             }
