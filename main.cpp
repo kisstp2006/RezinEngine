@@ -179,10 +179,13 @@ namespace
 
                 objectShader_->setMat4("projection", projection_);
                 lightShader_->setMat4("projection", projection_);
+                objectShader_->setFloat("light.constant", 1.0f);
+                objectShader_->setFloat("light.linear", 0.09f);
+                objectShader_->setFloat("light.quadratic", 0.032f);
 
                 objectShader_->setVec3(
-                    "light.direction",
-                    glm::vec3(-0.2f, -1.0f, -0.3f)
+                    "light.position",
+                    lightPosition_
                 );
 
                 vertexBuffer_ = std::make_unique<VertexBuffer>(
