@@ -13,12 +13,16 @@ uniform Material material;
 
 struct Light
 {
-    vec3 position;
+    vec3 direction;
 
     // Each Phong component can have its own light color and intensity.
     vec3 ambient;
     vec3 diffuse;
     vec3 specular;
+
+    float constant;
+    float linear;
+    float quadratic;
 };
 
 uniform Light light;
@@ -34,11 +38,13 @@ uniform vec3 viewPos;
 
 void main()
 {
+
+
     vec3 ambient  = light.ambient  * vec3(texture(material.diffuse, TexCoords));
 
     // Diffuse light becomes stronger as the surface turns toward the light.
     vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(light.position - FragPos);
+    vec3 lightDir = normalize(-light.direction);
     float diff = max(dot(norm, lightDir), 0.0);
     vec3 diffuse  = light.diffuse  * diff * vec3(texture(material.diffuse, TexCoords));
 

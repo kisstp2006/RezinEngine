@@ -134,11 +134,6 @@ namespace
                     "light.specular",
                     glm::vec3(1.0f)
                 );
-                objectShader_->setVec3(
-                    "light.position",
-                    lightPosition_
-                );
-
 
                 objectShader_->setFloat("material.shininess", 32.0f);
 
@@ -184,6 +179,11 @@ namespace
 
                 objectShader_->setMat4("projection", projection_);
                 lightShader_->setMat4("projection", projection_);
+
+                objectShader_->setVec3(
+                    "light.direction",
+                    glm::vec3(-0.2f, -1.0f, -0.3f)
+                );
 
                 vertexBuffer_ = std::make_unique<VertexBuffer>(
                     cubeVertices,
