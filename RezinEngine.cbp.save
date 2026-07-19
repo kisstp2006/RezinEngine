@@ -60,30 +60,77 @@
 			<Add directory="include" />
 			<Add directory="external/glad/include" />
 			<Add directory="external/stb" />
-			<Add directory="C:/glfw-3.4.bin.WIN64/include" />
+			<Add directory="thirdparty/glm" />
+			<Add directory="thirdparty/glfw/include" />
+			<Add directory="build/thirdparty/assimp/include" />
+			<Add directory="thirdparty/assimp/include" />
 		</Compiler>
 		<Linker>
 			<Add option="-static" />
+			<Add library="assimp" />
+			<Add library="zlibstatic" />
 			<Add library="glfw3" />
 			<Add library="opengl32" />
 			<Add library="gdi32" />
-			<Add directory="C:/glfw-3.4.bin.WIN64/lib" />
+			<Add directory="build/thirdparty/assimp/lib" />
+			<Add directory="build/thirdparty/assimp/contrib/zlib" />
+			<Add directory="build/thirdparty/glfw/src" />
 		</Linker>
-		<Unit filename="../../../Downloads/Happy_smiley_face.png" />
 		<Unit filename="assets/shaders/basic.frag" />
 		<Unit filename="assets/shaders/basic.vert" />
+		<Unit filename="assets/shaders/lightCube.frag" />
+		<Unit filename="assets/shaders/lightCube.vert" />
+		<Unit filename="assets/shaders/lighting.frag" />
+		<Unit filename="assets/shaders/lighting.vert" />
+		<Unit filename="assets/shaders/outlineColor.frag" />
+		<Unit filename="assets/texture/Happy_smiley_face.png" />
 		<Unit filename="assets/texture/missingTexture.png" />
 		<Unit filename="external/glad/src/glad.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="external/stb/stb_image.h" />
+		<Unit filename="include/Rezin/Application/Application.hpp" />
+		<Unit filename="include/Rezin/Assets/Mesh/Mesh.hpp" />
+		<Unit filename="include/Rezin/Assets/Model/Model.hpp" />
+		<Unit filename="include/Rezin/Assets/Model/ModelImporter.hpp" />
 		<Unit filename="include/Rezin/Assets/Texture/Texture.hpp" />
+		<Unit filename="include/Rezin/ECS/Component.hpp" />
+		<Unit filename="include/Rezin/ECS/Components/CameraComponent.hpp" />
+		<Unit filename="include/Rezin/ECS/Components/LightComponent.hpp" />
+		<Unit filename="include/Rezin/ECS/Components/TransformComponent.hpp" />
+		<Unit filename="include/Rezin/ECS/Detail/ComponentPool.hpp" />
+		<Unit filename="include/Rezin/ECS/Detail/TypeId.hpp" />
+		<Unit filename="include/Rezin/ECS/ECS.hpp" />
+		<Unit filename="include/Rezin/ECS/Entity.hpp" />
+		<Unit filename="include/Rezin/ECS/EntityManager.hpp" />
+		<Unit filename="include/Rezin/ECS/System.hpp" />
+		<Unit filename="include/Rezin/ECS/Systems/LightSystem.hpp" />
+		<Unit filename="include/Rezin/ECS/World.hpp" />
+		<Unit filename="include/Rezin/Graphics/Buffer.hpp" />
+		<Unit filename="include/Rezin/Graphics/Renderer.hpp" />
 		<Unit filename="include/Rezin/Graphics/ShaderProgram.hpp" />
+		<Unit filename="include/Rezin/Graphics/VertexArray.hpp" />
+		<Unit filename="include/Rezin/Input/Input.hpp" />
 		<Unit filename="include/Rezin/Utilities/Log.hpp" />
 		<Unit filename="main.cpp" />
+		<Unit filename="src/Application/Application.cpp" />
+		<Unit filename="src/Assets/Mesh/Mesh.cpp" />
+		<Unit filename="src/Assets/Model/Model.cpp" />
+		<Unit filename="src/Assets/Model/ModelImporter.cpp" />
 		<Unit filename="src/Assets/Texture/Texture.cpp" />
+		<Unit filename="src/ECS/EntityManager.cpp" />
+		<Unit filename="src/ECS/Systems/LightSystem.cpp" />
+		<Unit filename="src/ECS/World.cpp" />
+		<Unit filename="src/Graphics/Buffer.cpp" />
+		<Unit filename="src/Graphics/Renderer.cpp" />
 		<Unit filename="src/Graphics/ShaderProgram.cpp" />
+		<Unit filename="src/Graphics/VertexArray.cpp" />
+		<Unit filename="src/Input/Input.cpp" />
 		<Unit filename="src/Utilities/Log.cpp" />
+		<Unit filename="thirdparty/assimp/LICENSE" />
+		<Unit filename="thirdparty/assimp/include/assimp/Importer.hpp" />
+		<Unit filename="thirdparty/glm/copying.txt" />
+		<Unit filename="thirdparty/glm/glm/glm.hpp" />
 		<Extensions />
 	</Project>
 </CodeBlocks_project_file>

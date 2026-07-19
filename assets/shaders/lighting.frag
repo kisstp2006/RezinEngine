@@ -7,6 +7,7 @@ struct Material
     sampler2D diffuse;
     sampler2D specular;
     float shininess;
+    sampler2D normalMap;
 };
 
 struct DirLight
@@ -83,6 +84,14 @@ vec3 calcSpotLight(
 void main()
 {
     const vec3 normal = normalize(Normal);
+
+    vec3 rgb_normal = normal * 0.5 + 0.5;
+
+    // obtain normal from normal map in range [0,1]
+    normal = texture(normalMap, fs_in.TexCoords).rgb;
+    // transform normal vector to range [-1,1]
+    normal = normalize(normal * 2.0 - 1.0);
+
     const vec3 viewDirection = normalize(viewPos - FragPos);
     vec3 result = vec3(0.0);
 

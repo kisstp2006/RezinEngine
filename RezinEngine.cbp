@@ -82,18 +82,19 @@
 		<Unit filename="assets/shaders/lightCube.vert" />
 		<Unit filename="assets/shaders/lighting.frag" />
 		<Unit filename="assets/shaders/lighting.vert" />
-		<Unit filename="assets/texture/missingTexture.png">
-			<Option compile="0" />
-			<Option link="0" />
-		</Unit>
-		<Unit filename="assets/texture/Happy_smiley_face.png">
-			<Option compile="0" />
-			<Option link="0" />
-		</Unit>
+		<Unit filename="assets/shaders/outlineColor.frag" />
+		<Unit filename="assets/texture/Happy_smiley_face.png" />
+		<Unit filename="assets/texture/missingTexture.png" />
+		<Unit filename="assets/texture/normal_mapping_normal_map.png" />
 		<Unit filename="external/glad/src/glad.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="external/stb/stb_image.h" />
+		<Unit filename="include/Rezin/Application/Application.hpp" />
+		<Unit filename="include/Rezin/Assets/Mesh/Mesh.hpp" />
+		<Unit filename="include/Rezin/Assets/Model/Model.hpp" />
+		<Unit filename="include/Rezin/Assets/Model/ModelImporter.hpp" />
+		<Unit filename="include/Rezin/Assets/Texture/Texture.hpp" />
 		<Unit filename="include/Rezin/ECS/Component.hpp" />
 		<Unit filename="include/Rezin/ECS/Components/CameraComponent.hpp" />
 		<Unit filename="include/Rezin/ECS/Components/LightComponent.hpp" />
@@ -110,11 +111,6 @@
 		<Unit filename="include/Rezin/Graphics/Renderer.hpp" />
 		<Unit filename="include/Rezin/Graphics/ShaderProgram.hpp" />
 		<Unit filename="include/Rezin/Graphics/VertexArray.hpp" />
-		<Unit filename="include/Rezin/Assets/Mesh/Mesh.hpp" />
-		<Unit filename="include/Rezin/Assets/Model/Model.hpp" />
-		<Unit filename="include/Rezin/Assets/Model/ModelImporter.hpp" />
-		<Unit filename="include/Rezin/Assets/Texture/Texture.hpp" />
-		<Unit filename="include/Rezin/Application/Application.hpp" />
 		<Unit filename="include/Rezin/Input/Input.hpp" />
 		<Unit filename="include/Rezin/Utilities/Log.hpp" />
 		<Unit filename="main.cpp" />
@@ -132,22 +128,10 @@
 		<Unit filename="src/Graphics/VertexArray.cpp" />
 		<Unit filename="src/Input/Input.cpp" />
 		<Unit filename="src/Utilities/Log.cpp" />
-		<Unit filename="thirdparty/glm/copying.txt">
-			<Option compile="0" />
-			<Option link="0" />
-		</Unit>
-		<Unit filename="thirdparty/glm/glm/glm.hpp">
-			<Option compile="0" />
-			<Option link="0" />
-		</Unit>
-		<Unit filename="thirdparty/assimp/LICENSE">
-			<Option compile="0" />
-			<Option link="0" />
-		</Unit>
-		<Unit filename="thirdparty/assimp/include/assimp/Importer.hpp">
-			<Option compile="0" />
-			<Option link="0" />
-		</Unit>
+		<Unit filename="thirdparty/assimp/LICENSE" />
+		<Unit filename="thirdparty/assimp/include/assimp/Importer.hpp" />
+		<Unit filename="thirdparty/glm/copying.txt" />
+		<Unit filename="thirdparty/glm/glm/glm.hpp" />
 		<Extensions />
 	</Project>
 </CodeBlocks_project_file>
