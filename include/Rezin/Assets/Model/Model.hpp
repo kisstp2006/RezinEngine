@@ -2,6 +2,7 @@
 
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -26,6 +27,7 @@ struct ModelVertex
     glm::vec3 position{0.0f};
     glm::vec3 normal{0.0f};
     glm::vec2 textureCoordinates{0.0f};
+    glm::vec4 tangent{0.0f};
 };
 
 // This is the renderer-independent part of a classic material. Empty texture
@@ -38,7 +40,9 @@ struct ModelMaterialData
     std::filesystem::path specularTexturePath;
     std::uint32_t diffuseEmbeddedTexture{noEmbeddedModelTexture};
     std::uint32_t specularEmbeddedTexture{noEmbeddedModelTexture};
+    std::uint32_t normalEmbeddedTexture{noEmbeddedModelTexture};
     float shininess{32.0f};
+    std::filesystem::path normalTexturePath;
 };
 
 // Compressed PNG/JPG-style image bytes copied from the imported model. The
@@ -116,7 +120,7 @@ class ShaderProgram;
 
 // Controls how a CPU-side ModelAsset becomes a renderable OpenGL Model.
 // The fallback textures are used when an imported material has no map of that
-// type, which keeps both samplers valid for the current lighting shader.
+// type, which keeps all samplers valid for the current lighting shader.
 struct ModelRenderSpecification
 {
     std::filesystem::path fallbackDiffuseTexture{
@@ -125,9 +129,13 @@ struct ModelRenderSpecification
     std::filesystem::path fallbackSpecularTexture{
         "assets/texture/missingTexture_specular.png"
     };
+    std::filesystem::path fallbackNormalTexture{
+        "assets/texture/missingTexture_normal.png"
+    };
 
     std::uint32_t diffuseTextureSlot{0};
     std::uint32_t specularTextureSlot{1};
+    std::uint32_t normalTextureSlot{2};
     float defaultShininess{32.0f};
     bool flipTexturesVertically{true};
     bool diffuseTexturesSrgb{false};
@@ -153,7 +161,8 @@ public:
     Model& operator=(Model&& other) noexcept;
 
     // The shader must follow the current material uniform contract:
-    // material.diffuse, material.specular, and material.shininess.
+    // material.diffuse, material.specular, material.normalMap,
+    // and material.shininess.
     void draw(const ShaderProgram& shader) const;
 
     // Draws only the imported mesh geometry. This is useful for simple shaders

@@ -11,7 +11,7 @@ namespace
 {
     // Our current BufferLayout calculates offsets by adding the attribute sizes.
     // These checks guarantee that ModelVertex really uses the expected tightly
-    // packed 8-float representation.
+    // packed 12-float representation.
     static_assert(std::is_standard_layout_v<rezin::ModelVertex>);
 
     static_assert(
@@ -28,10 +28,8 @@ namespace
         == sizeof(float) * 6
     );
 
-    static_assert(
-        sizeof(rezin::ModelVertex)
-        == sizeof(float) * 8
-    );
+    static_assert(offsetof(rezin::ModelVertex, tangent) == sizeof(float) * 8);
+    static_assert(sizeof(rezin::ModelVertex) == sizeof(float) * 12);
 
     std::size_t checkedVertexBufferSize(
         const rezin::ModelMeshData& meshData
@@ -125,11 +123,12 @@ namespace rezin
           name_(meshData.name),
           materialSlot_(meshData.materialSlot)
     {
-        // The list order becomes shader locations 0, 1, and 2.
+        // The list order becomes shader locations 0, 1, 2, and 3.
         vertexBuffer_.setLayout({
             {ShaderDataType::Float3, "aPosition"},
             {ShaderDataType::Float3, "aNormal"},
-            {ShaderDataType::Float2, "aTextureCoordinates"}
+            {ShaderDataType::Float2, "aTextureCoordinates"},
+            {ShaderDataType::Float4, "aTangent"}
         });
 
         vertexArray_.addVertexBuffer(vertexBuffer_);

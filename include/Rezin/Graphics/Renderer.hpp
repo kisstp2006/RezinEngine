@@ -24,7 +24,7 @@ struct RendererSpecification
     glm::vec4 clearColor{0.1f, 0.1f, 0.1f, 1.0f};
     bool depthTesting{true};
     bool depthWrite{true};
-    bool stencilTest){true};
+    bool stencilTest{true};
     DepthCompareFunction depthFunction{DepthCompareFunction::Less};
     std::uint32_t depthBufferBits{24};
 };

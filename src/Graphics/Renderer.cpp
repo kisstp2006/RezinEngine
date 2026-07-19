@@ -174,7 +174,7 @@ void Renderer::setDepthTesting(bool enabled)
     else
         glDisable(GL_DEPTH_TEST);
 
-    state().specification.stencilTesting = enabled;
+    state().specification.stencilTest = enabled;
     if (enabled)
         glEnable(GL_STENCIL_TEST);
     else

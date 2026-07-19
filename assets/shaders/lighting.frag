@@ -83,12 +83,8 @@ vec3 calcSpotLight(
 
 void main()
 {
-    const vec3 normal = normalize(Normal);
-
-    vec3 rgb_normal = normal * 0.5 + 0.5;
-
     // obtain normal from normal map in range [0,1]
-    normal = texture(normalMap, fs_in.TexCoords).rgb;
+    vec3 normal = texture(material.normalMap, TexCoords).rgb;
     // transform normal vector to range [-1,1]
     normal = normalize(normal * 2.0 - 1.0);
 

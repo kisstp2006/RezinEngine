@@ -173,6 +173,9 @@ namespace
                 modelSpecification.fallbackSpecularTexture =
                     "assets/texture/missingTexture_specular.png";
 
+                modelSpecification.fallbackNormalTexture =
+                    "assets/texture/normal_mapping_normal_map.png";
+
                 modelSpecification.diffuseTextureSlot = 0;
                 modelSpecification.specularTextureSlot = 1;
                 modelSpecification.defaultShininess = 32.0f;

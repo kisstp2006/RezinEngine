@@ -153,6 +153,16 @@ ModelAsset::ModelAsset(
                 "Model material references an invalid embedded specular texture."
             );
         }
+
+        if (
+            material.normalEmbeddedTexture != noEmbeddedModelTexture
+            && material.normalEmbeddedTexture >= embeddedTextures_.size()
+        )
+        {
+            throw std::out_of_range(
+                "Model material references an invalid embedded normal texture."
+            );
+        }
     }
 
     for (std::size_t meshIndex = 0; meshIndex < meshes_.size(); ++meshIndex)
@@ -332,6 +342,7 @@ struct Model::Implementation
     {
         const Texture2D* diffuseTexture{nullptr};
         const Texture2D* specularTexture{nullptr};
+        const Texture2D* normalTexture{nullptr};
         float shininess{32.0f};
     };
 
@@ -345,10 +356,14 @@ struct Model::Implementation
         if (
             specification.diffuseTextureSlot
             == specification.specularTextureSlot
+            || specification.diffuseTextureSlot
+            == specification.normalTextureSlot
+            || specification.specularTextureSlot
+            == specification.normalTextureSlot
         )
         {
             throw std::invalid_argument(
-                "Diffuse and specular textures must use different slots."
+                "Diffuse, specular, and normal textures must use different slots."
             );
         }
 
@@ -362,6 +377,8 @@ struct Model::Implementation
             || specification.diffuseTextureSlot
                 >= static_cast<std::uint32_t>(maximumTextureUnits)
             || specification.specularTextureSlot
+                >= static_cast<std::uint32_t>(maximumTextureUnits)
+            || specification.normalTextureSlot
                 >= static_cast<std::uint32_t>(maximumTextureUnits))
         {
             throw std::out_of_range(
@@ -388,6 +405,11 @@ struct Model::Implementation
         specularSpecification.flipVertically =
             specification.flipTexturesVertically;
         specularSpecification.srgb = false;
+
+        TextureSpecification normalSpecification;
+        normalSpecification.flipVertically =
+            specification.flipTexturesVertically;
+        normalSpecification.srgb = false;
 
         materials.reserve(asset.materialCount());
 
@@ -463,6 +485,38 @@ struct Model::Implementation
                 );
             }
 
+            if (
+                materialData.normalEmbeddedTexture
+                != noEmbeddedModelTexture
+            )
+            {
+                runtimeMaterial.normalTexture =
+                    loadCachedEmbeddedTexture(
+                        materialData.normalEmbeddedTexture,
+                        asset.embeddedTexture(
+                            materialData.normalEmbeddedTexture
+                        ),
+                        normalSpecification,
+                        normalEmbeddedTextureCache
+                    );
+            }
+            else
+            {
+                const std::filesystem::path& normalPath =
+                    selectTexturePath(
+                        materialData.normalTexturePath,
+                        specification.fallbackNormalTexture,
+                        "normal",
+                        materialName
+                    );
+
+                runtimeMaterial.normalTexture = loadCachedTexture(
+                    normalPath,
+                    normalSpecification,
+                    normalTextureCache
+                );
+            }
+
             runtimeMaterial.shininess =
                 std::isfinite(materialData.shininess)
                 && materialData.shininess > 0.0f
@@ -481,8 +535,10 @@ struct Model::Implementation
     ModelRenderSpecification specification;
     std::vector<CachedModelTexture> diffuseTextureCache;
     std::vector<CachedModelTexture> specularTextureCache;
+    std::vector<CachedModelTexture> normalTextureCache;
     std::vector<CachedEmbeddedModelTexture> diffuseEmbeddedTextureCache;
     std::vector<CachedEmbeddedModelTexture> specularEmbeddedTextureCache;
+    std::vector<CachedEmbeddedModelTexture> normalEmbeddedTextureCache;
     std::vector<RuntimeMaterial> materials;
     std::vector<Mesh> meshes;
 };
@@ -522,6 +578,12 @@ void Model::draw(const ShaderProgram& shader) const
             implementation_->specification.specularTextureSlot
         )
     );
+    shader.setInt(
+        "material.normalMap",
+        static_cast<int>(
+            implementation_->specification.normalTextureSlot
+        )
+    );
 
     for (const Mesh& mesh : implementation_->meshes)
     {
@@ -533,6 +595,9 @@ void Model::draw(const ShaderProgram& shader) const
         );
         material.specularTexture->bind(
             implementation_->specification.specularTextureSlot
+        );
+        material.normalTexture->bind(
+            implementation_->specification.normalTextureSlot
         );
         shader.setFloat("material.shininess", material.shininess);
         mesh.draw();
