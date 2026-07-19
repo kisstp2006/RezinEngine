@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <span>
 
 namespace rezin
 {
@@ -40,6 +41,14 @@ public:
         TextureSpecification specification = {}
     );
 
+    // Creates a texture from a complete encoded image already held in memory,
+    // such as a PNG or JPG embedded inside an FBX model.
+    Texture2D(
+        std::span<const std::uint8_t> encodedImage,
+        std::filesystem::path sourceName,
+        TextureSpecification specification = {}
+    );
+
     ~Texture2D();
 
     Texture2D(const Texture2D&) = delete;
@@ -65,6 +74,10 @@ private:
     int channels_{0};
     std::filesystem::path path_;
     TextureSpecification specification_;
+
+    void loadFromEncodedImage(
+        std::span<const std::uint8_t> encodedImage
+    );
 };
 
 }

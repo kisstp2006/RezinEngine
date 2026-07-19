@@ -6,12 +6,17 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <limits>
+#include <memory>
 #include <span>
 #include <string>
 #include <vector>
 
 namespace rezin
 {
+
+inline constexpr std::uint32_t noEmbeddedModelTexture =
+    std::numeric_limits<std::uint32_t>::max();
 
 // ModelVertex is the engine-owned vertex format produced by a future importer.
 // Keeping it independent from Assimp prevents third-party types from leaking
@@ -23,6 +28,27 @@ struct ModelVertex
     glm::vec2 textureCoordinates{0.0f};
 };
 
+// This is the renderer-independent part of a classic material. Empty texture
+// paths mean that the renderable Model should use its configured fallback.
+// Keeping paths here avoids creating OpenGL textures during file importing.
+struct ModelMaterialData
+{
+    std::string name;
+    std::filesystem::path diffuseTexturePath;
+    std::filesystem::path specularTexturePath;
+    std::uint32_t diffuseEmbeddedTexture{noEmbeddedModelTexture};
+    std::uint32_t specularEmbeddedTexture{noEmbeddedModelTexture};
+    float shininess{32.0f};
+};
+
+// Compressed PNG/JPG-style image bytes copied from the imported model. The
+// bytes remain renderer-independent until Model creates a Texture2D from them.
+struct ModelEmbeddedTextureData
+{
+    std::string name;
+    std::vector<std::uint8_t> encodedImage;
+};
+
 // One imported model may contain several independently drawable meshes. This
 // structure stores the CPU-side data for one of those meshes. GPU buffers will
 // be created by the mesh/rendering layer instead of by ModelAsset itself.
@@ -32,9 +58,7 @@ struct ModelMeshData
     std::vector<ModelVertex> vertices;
     std::vector<std::uint32_t> indices;
 
-    // This is only an opaque slot number for now. A later material system may
-    // map it to a classic Phong material, a PBR material, or another pipeline
-    // without changing the model's geometry representation.
+    // Index of the material used by this mesh inside ModelAsset::materials().
     std::uint32_t materialSlot{0};
 };
 
@@ -47,7 +71,9 @@ class ModelAsset final
 public:
     ModelAsset(
         std::filesystem::path sourcePath,
-        std::vector<ModelMeshData> meshes
+        std::vector<ModelMeshData> meshes,
+        std::vector<ModelMaterialData> materials = {},
+        std::vector<ModelEmbeddedTextureData> embeddedTextures = {}
     );
 
     ~ModelAsset() = default;
@@ -60,9 +86,18 @@ public:
 
     [[nodiscard]] const std::filesystem::path& path() const noexcept;
     [[nodiscard]] std::span<const ModelMeshData> meshes() const noexcept;
+    [[nodiscard]] std::span<const ModelMaterialData> materials() const noexcept;
+    [[nodiscard]] std::span<const ModelEmbeddedTextureData>
+        embeddedTextures() const noexcept;
     [[nodiscard]] const ModelMeshData& mesh(std::size_t index) const;
+    [[nodiscard]] const ModelMaterialData& material(std::size_t index) const;
+    [[nodiscard]] const ModelEmbeddedTextureData& embeddedTexture(
+        std::size_t index
+    ) const;
 
     [[nodiscard]] std::size_t meshCount() const noexcept;
+    [[nodiscard]] std::size_t materialCount() const noexcept;
+    [[nodiscard]] std::size_t embeddedTextureCount() const noexcept;
     [[nodiscard]] std::size_t vertexCount() const noexcept;
     [[nodiscard]] std::size_t indexCount() const noexcept;
     [[nodiscard]] std::size_t triangleCount() const noexcept;
@@ -71,8 +106,66 @@ public:
 private:
     std::filesystem::path sourcePath_;
     std::vector<ModelMeshData> meshes_;
+    std::vector<ModelMaterialData> materials_;
+    std::vector<ModelEmbeddedTextureData> embeddedTextures_;
     std::size_t vertexCount_{0};
     std::size_t indexCount_{0};
+};
+
+class ShaderProgram;
+
+// Controls how a CPU-side ModelAsset becomes a renderable OpenGL Model.
+// The fallback textures are used when an imported material has no map of that
+// type, which keeps both samplers valid for the current lighting shader.
+struct ModelRenderSpecification
+{
+    std::filesystem::path fallbackDiffuseTexture{
+        "assets/texture/missingTexture.png"
+    };
+    std::filesystem::path fallbackSpecularTexture{
+        "assets/texture/missingTexture_specular.png"
+    };
+
+    std::uint32_t diffuseTextureSlot{0};
+    std::uint32_t specularTextureSlot{1};
+    float defaultShininess{32.0f};
+    bool flipTexturesVertically{true};
+    bool diffuseTexturesSrgb{false};
+};
+
+// Model is the GPU-side representation of a complete imported model. It owns
+// one Mesh per imported mesh and shares duplicate material textures internally.
+// Construct and destroy it only while a valid OpenGL context exists.
+class Model final
+{
+public:
+    explicit Model(
+        ModelAsset asset,
+        ModelRenderSpecification specification = {}
+    );
+
+    ~Model();
+
+    Model(const Model&) = delete;
+    Model& operator=(const Model&) = delete;
+
+    Model(Model&& other) noexcept;
+    Model& operator=(Model&& other) noexcept;
+
+    // The shader must follow the current material uniform contract:
+    // material.diffuse, material.specular, and material.shininess.
+    void draw(const ShaderProgram& shader) const;
+
+    // Draws only the imported mesh geometry. This is useful for simple shaders
+    // such as light markers that do not expose the material uniform contract.
+    void drawGeometry() const;
+
+    [[nodiscard]] const ModelAsset& asset() const;
+    [[nodiscard]] std::size_t meshCount() const noexcept;
+
+private:
+    struct Implementation;
+    std::unique_ptr<Implementation> implementation_;
 };
 
 }

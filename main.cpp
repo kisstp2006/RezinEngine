@@ -3,11 +3,10 @@
 #include <Rezin/ECS/ECS.hpp>
 #include <Rezin/Input/Input.hpp>
 #include <Rezin/Utilities/Log.hpp>
-#include <Rezin/Graphics/Buffer.hpp>
-#include <Rezin/Graphics/VertexArray.hpp>
-#include <Rezin/Assets/Texture/Texture.hpp>
+#include <Rezin/Assets/Model/Model.hpp>
 #include <Rezin/Graphics/ShaderProgram.hpp>
 #include <Rezin/Application/Application.hpp>
+#include <Rezin/Assets/Model/ModelImporter.hpp>
 
 #include <exception>
 #include <cmath>
@@ -18,6 +17,7 @@
 #include <array>
 #include <string>
 #include <memory>
+#include <random>
 #include <utility>
 
 
@@ -25,69 +25,7 @@ using namespace rezin;
 
 namespace
 {
-    // Each vertex stores position.xyz, normal.xyz, and textureCoordinates.xy.
-    constexpr float cubeVertices[] = {
-        // Back face
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,  0.0f, 0.0f,
-
-        // Front face
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f, 0.0f,
-
-        // Left face
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-
-        // Right face
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,  1.0f, 0.0f,
-
-        // Bottom face
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,  0.0f, 1.0f,
-
-        // Top face
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f, 1.0f
-    };
-
-    const glm::vec3 cubePositions[] = {
-        glm::vec3( 0.0f,  0.0f,   0.0f),
-        glm::vec3( 2.0f,  5.0f, -15.0f),
-        glm::vec3(-1.5f, -2.2f,  -2.5f),
-        glm::vec3(-3.8f, -2.0f, -12.3f),
-        glm::vec3( 2.4f, -0.4f,  -3.5f),
-        glm::vec3(-1.7f,  3.0f,  -7.5f),
-        glm::vec3( 1.3f, -2.0f,  -2.5f),
-        glm::vec3( 1.5f,  2.0f,  -2.5f),
-        glm::vec3( 1.5f,  0.2f,  -1.5f),
-        glm::vec3(-1.3f,  1.0f,  -1.5f)
-    };
+    constexpr std::size_t importedCubeCount = 10;
 
     constexpr unsigned int pointLightCount = 4;
     const glm::vec3 pointLightPositions[pointLightCount] = {
@@ -136,19 +74,6 @@ namespace
                     "assets/shaders/lightCube.vert",
                     "assets/shaders/lightCube.frag"
                 );
-
-                objectShader_->setFloat("material.shininess", 32.0f);
-
-                diffuseMap_ = std::make_unique<Texture2D>(
-                    "assets/texture/missingTexture.png"
-                );
-
-                diffuseMap_specular_ = std::make_unique<Texture2D>(
-                    "assets/texture/missingTexture_specular.png"
-                );
-
-                objectShader_->setInt("material.diffuse", 0);
-                objectShader_->setInt("material.specular", 1);
 
                 EntityManager& entities = world_.entityManager();
                 cameraEntity_ = entities.createEntity();
@@ -244,31 +169,26 @@ namespace
                 objectShader_->setMat4("projection", projection_);
                 lightShader_->setMat4("projection", projection_);
 
-                vertexBuffer_ = std::make_unique<VertexBuffer>(
-                    cubeVertices,
-                    sizeof(cubeVertices)
+                ModelRenderSpecification modelSpecification;
+
+                modelSpecification.fallbackDiffuseTexture =
+                    "assets/texture/missingTexture.png";
+
+                modelSpecification.fallbackSpecularTexture =
+                    "assets/texture/missingTexture_specular.png";
+
+                modelSpecification.diffuseTextureSlot = 0;
+                modelSpecification.specularTextureSlot = 1;
+                modelSpecification.defaultShininess = 32.0f;
+
+                model_ = std::make_unique<Model>(
+                    ModelImporter::load(
+                        "assets/model/Cube.fbx"
+                    ),
+                    modelSpecification
                 );
 
-                vertexBuffer_->setLayout({
-                    {ShaderDataType::Float3, "aPosition"},
-                    {ShaderDataType::Float3, "aNormal"},
-                    {ShaderDataType::Float2, "aTextureCoordinates"}
-                });
-
-                vertexArray_ = std::make_unique<VertexArray>();
-
-                vertexArray_->addVertexBuffer(
-                    *vertexBuffer_
-                );
-
-                // The light cube shares immutable vertex data with the scene
-                // cubes, but owns separate VAO state. Future changes to object
-                // attributes will therefore not alter the light's VAO.
-                lightVertexArray_ = std::make_unique<VertexArray>();
-                lightVertexArray_->addVertexBuffer(
-                    *vertexBuffer_
-                );
-
+                generateImportedCubeTransforms();
             }
 
             void onUpdate(float deltaSeconds) override
@@ -296,45 +216,24 @@ namespace
                     | GL_DEPTH_BUFFER_BIT
                 );
 
-                diffuseMap_->bind(0);
-
-                diffuseMap_specular_->bind(1);
-
-
-                objectShader_->use();
-                vertexArray_->bind();
-
-                for (unsigned int i = 0; i < 10; ++i)
+                if (model_)
                 {
-                    glm::mat4 model = glm::mat4(1.0f);
-
-                    model = glm::translate(
-                        model,
-                        cubePositions[i]
-                    );
-
-                    const float angle = 20.0f * static_cast<float>(i);
-
-                    model = glm::rotate(
-                        model,
-                        glm::radians(angle),
-                        glm::vec3(1.0f, 0.3f, 0.5f)
-                    );
-
-                    objectShader_->setMat4("model", model);
-
-                    glDrawArrays(
-                        GL_TRIANGLES,
-                        0,
-                        36
-                    );
+                    for (const glm::mat4& modelTransform
+                         : importedCubeTransforms_)
+                    {
+                        objectShader_->setMat4(
+                            "model",
+                            modelTransform
+                        );
+                        model_->draw(*objectShader_);
+                    }
                 }
 
                 lightShader_->use();
-                lightVertexArray_->bind();
 
                 // Each point light gets a small visible marker cube. The
-                // directional light and camera flashlight have no marker.
+                // directional light and camera flashlight have no marker. The
+                // same imported geometry is reused without material binding.
                 for (unsigned int index = 0; index < pointLightCount; ++index)
                 {
                     const TransformComponent& lightTransform =
@@ -350,21 +249,12 @@ namespace
                     );
                     lightModel = glm::scale(
                         lightModel,
-                        glm::vec3(0.2f)
+                        glm::vec3(0.001f)
                     );
 
                     lightShader_->setMat4("model", lightModel);
-
-                    glDrawArrays(
-                        GL_TRIANGLES,
-                        0,
-                        36
-                    );
+                    model_->drawGeometry();
                 }
-
-                VertexArray::unbind();
-
-
             }
 
             void onShutdown() noexcept override
@@ -393,13 +283,9 @@ namespace
                 // those systems, including objectShader_.
                 world_.shutdown();
 
-                diffuseMap_specular_.reset();
-                diffuseMap_.reset();
-
-                lightVertexArray_.reset();
-                vertexArray_.reset();
-
-                vertexBuffer_.reset();
+                // Model owns OpenGL meshes and textures, so release it while
+                // the application still has a valid OpenGL context.
+                model_.reset();
 
                 lightShader_.reset();
                 objectShader_.reset();
@@ -434,6 +320,79 @@ namespace
             Entity cameraEntity_;
             Entity directionalLightEntity_;
             std::array<Entity, pointLightCount> pointLightEntities_{};
+            std::unique_ptr<Model> model_;
+            std::array<glm::mat4, importedCubeCount>
+                importedCubeTransforms_{};
+
+            void generateImportedCubeTransforms()
+            {
+                std::mt19937 randomGenerator{
+                    std::random_device{}()
+                };
+
+                std::uniform_real_distribution<float> horizontalPosition(
+                    -7.0f,
+                    7.0f
+                );
+                std::uniform_real_distribution<float> verticalPosition(
+                    -3.5f,
+                    3.5f
+                );
+                std::uniform_real_distribution<float> depthPosition(
+                    -22.0f,
+                    -3.0f
+                );
+                std::uniform_real_distribution<float> rotationAngle(
+                    0.0f,
+                    360.0f
+                );
+                std::uniform_real_distribution<float> axisComponent(
+                    -1.0f,
+                    1.0f
+                );
+                std::uniform_real_distribution<float> relativeScale(
+                    0.65f,
+                    1.35f
+                );
+
+                for (glm::mat4& transform : importedCubeTransforms_)
+                {
+                    const glm::vec3 position{
+                        horizontalPosition(randomGenerator),
+                        verticalPosition(randomGenerator),
+                        depthPosition(randomGenerator)
+                    };
+
+                    glm::vec3 rotationAxis{
+                        axisComponent(randomGenerator),
+                        axisComponent(randomGenerator),
+                        axisComponent(randomGenerator)
+                    };
+
+                    if (glm::dot(rotationAxis, rotationAxis) < 0.0001f)
+                        rotationAxis = glm::vec3(0.0f, 1.0f, 0.0f);
+                    else
+                        rotationAxis = glm::normalize(rotationAxis);
+
+                    transform = glm::mat4(1.0f);
+                    transform = glm::translate(transform, position);
+                    transform = glm::rotate(
+                        transform,
+                        glm::radians(rotationAngle(randomGenerator)),
+                        rotationAxis
+                    );
+
+                    // Cube.fbx is 200 units wide. A base scale of 0.005
+                    // converts it to a one-unit cube before random variation.
+                    const float modelScale =
+                        0.005f * relativeScale(randomGenerator);
+
+                    transform = glm::scale(
+                        transform,
+                        glm::vec3(modelScale)
+                    );
+                }
+            }
 
             void updateLightColor(float deltaSeconds)
             {
@@ -617,12 +576,6 @@ namespace
 
             std::unique_ptr<ShaderProgram> objectShader_;
             std::unique_ptr<ShaderProgram> lightShader_;
-            std::unique_ptr<Texture2D> diffuseMap_;
-            std::unique_ptr<Texture2D> diffuseMap_specular_;
-
-            std::unique_ptr<VertexBuffer> vertexBuffer_;
-            std::unique_ptr<VertexArray> vertexArray_;
-            std::unique_ptr<VertexArray> lightVertexArray_;
 
             glm::mat4 view_{1.0f};
             glm::mat4 projection_{1.0f};

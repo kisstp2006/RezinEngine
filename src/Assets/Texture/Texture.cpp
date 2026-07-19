@@ -145,6 +145,41 @@ Texture2D::Texture2D(
       specification_(specification)
 {
     const std::vector<stbi_uc> encoded = readBinaryFile(path_);
+    loadFromEncodedImage(encoded);
+}
+
+Texture2D::Texture2D(
+    std::span<const std::uint8_t> encodedImage,
+    std::filesystem::path sourceName,
+    TextureSpecification specification
+)
+    : path_(std::move(sourceName)),
+      specification_(specification)
+{
+    loadFromEncodedImage(encodedImage);
+}
+
+void Texture2D::loadFromEncodedImage(
+    std::span<const std::uint8_t> encodedImage
+)
+{
+    if (encodedImage.empty())
+    {
+        throw std::runtime_error(
+            "Encoded texture data is empty: " + path_.string()
+        );
+    }
+
+    if (
+        encodedImage.size()
+        > static_cast<std::size_t>(std::numeric_limits<int>::max())
+    )
+    {
+        throw std::runtime_error(
+            "Encoded texture data is too large for stb_image: "
+            + path_.string()
+        );
+    }
 
     using PixelPointer = std::unique_ptr<stbi_uc, decltype(&stbi_image_free)>;
     PixelPointer pixels(nullptr, &stbi_image_free);
@@ -157,8 +192,8 @@ Texture2D::Texture2D(
         stbi_set_flip_vertically_on_load(specification_.flipVertically ? 1 : 0);
 
         pixels.reset(stbi_load_from_memory(
-            encoded.data(),
-            static_cast<int>(encoded.size()),
+            encodedImage.data(),
+            static_cast<int>(encodedImage.size()),
             &width_,
             &height_,
             &channels_,
