@@ -1,4 +1,5 @@
 #include <Rezin/Application/Application.hpp>
+#include <Rezin/Graphics/Renderer.hpp>
 #include <Rezin/Input/Input.hpp>
 #include <Rezin/Utilities/Log.hpp>
 
@@ -10,6 +11,7 @@
 #include <algorithm>
 #include <chrono>
 #include <exception>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -56,6 +58,17 @@ namespace rezin
         {
             throw std::invalid_argument(
             "Initial application width and height must both be greater than zero."
+            );
+        }
+        if (specification_.renderer.depthBufferBits == 0
+            || specification_.renderer.depthBufferBits
+                > static_cast<std::uint32_t>(
+                    std::numeric_limits<int>::max()
+                ))
+        {
+            throw std::invalid_argument(
+                "Renderer depth buffer precision must fit into a positive "
+                "platform integer."
             );
         }
 
@@ -208,6 +221,12 @@ void Application::initializePlatform()
         GLFW_RESIZABLE,
         specification_.resizable ? GLFW_TRUE : GLFW_FALSE
     );
+    glfwWindowHint(
+        GLFW_DEPTH_BITS,
+        static_cast<int>(
+            specification_.renderer.depthBufferBits
+        )
+    );
 
     window_ = glfwCreateWindow(
         static_cast<int>(specification_.width),
@@ -238,6 +257,8 @@ void Application::initializePlatform()
             "Failed to load OpenGL functions with GLAD after creating the context."
         );
     }
+
+    Renderer::initialize(specification_.renderer);
 
     glfwSwapInterval(specification_.vsync ? 1 : 0);
 
@@ -270,11 +291,9 @@ void Application::initializePlatform()
         std::max(framebufferHeight, 0)
     );
 
-    glViewport(
-        0,
-        0,
-        framebufferWidth,
-        framebufferHeight
+    Renderer::setViewport(
+        specification_.width,
+        specification_.height
     );
 
     Log::Info(
@@ -292,6 +311,9 @@ void Application::shutdownPlatform() noexcept
 {
     if (window_ != nullptr)
     {
+        if (Renderer::isInitialized())
+            Renderer::shutdown();
+
         Input::shutdown();
 
         glfwSetFramebufferSizeCallback(window_, nullptr);
@@ -338,6 +360,7 @@ void Application::runOneFrame(float deltaSeconds)
     }
 
     onUpdate(deltaSeconds);
+    Renderer::beginFrame();
     onRender();
 
     glfwSwapBuffers(window_);
@@ -365,12 +388,13 @@ void Application::framebufferSizeCallback(
     application->specification_.height =
         static_cast<std::uint32_t>(safeHeight);
 
-    glViewport(
-        0,
-        0,
-        safeWidth,
-        safeHeight
-    );
+    if (Renderer::isInitialized())
+    {
+        Renderer::setViewport(
+            application->specification_.width,
+            application->specification_.height
+        );
+    }
 
     application->onFramebufferResize(
         application->specification_.width,

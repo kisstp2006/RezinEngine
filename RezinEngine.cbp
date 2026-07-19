@@ -107,6 +107,7 @@
 		<Unit filename="include/Rezin/ECS/Systems/LightSystem.hpp" />
 		<Unit filename="include/Rezin/ECS/World.hpp" />
 		<Unit filename="include/Rezin/Graphics/Buffer.hpp" />
+		<Unit filename="include/Rezin/Graphics/Renderer.hpp" />
 		<Unit filename="include/Rezin/Graphics/ShaderProgram.hpp" />
 		<Unit filename="include/Rezin/Graphics/VertexArray.hpp" />
 		<Unit filename="include/Rezin/Assets/Mesh/Mesh.hpp" />
@@ -126,6 +127,7 @@
 		<Unit filename="src/ECS/Systems/LightSystem.cpp" />
 		<Unit filename="src/ECS/World.cpp" />
 		<Unit filename="src/Graphics/Buffer.cpp" />
+		<Unit filename="src/Graphics/Renderer.cpp" />
 		<Unit filename="src/Graphics/ShaderProgram.cpp" />
 		<Unit filename="src/Graphics/VertexArray.cpp" />
 		<Unit filename="src/Input/Input.cpp" />

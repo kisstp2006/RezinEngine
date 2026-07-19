@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Rezin/Graphics/Renderer.hpp>
+
 #include <cstdint>
 #include <string>
 
@@ -15,6 +17,7 @@ struct ApplicationSpecification
     std::uint32_t height = 720;
     bool resizable = true;
     bool vsync = true;
+    RendererSpecification renderer;
 };
 
 class Application

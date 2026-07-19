@@ -1,9 +1,8 @@
-#include <glad/glad.h>
-
 #include <Rezin/ECS/ECS.hpp>
 #include <Rezin/Input/Input.hpp>
 #include <Rezin/Utilities/Log.hpp>
 #include <Rezin/Assets/Model/Model.hpp>
+#include <Rezin/Graphics/Renderer.hpp>
 #include <Rezin/Graphics/ShaderProgram.hpp>
 #include <Rezin/Application/Application.hpp>
 #include <Rezin/Assets/Model/ModelImporter.hpp>
@@ -50,17 +49,14 @@ namespace
         protected:
             void onStartup() override
             {
-                glEnable(GL_DEPTH_TEST);
-
-                int maximumAttributes = 0;
-                glGetIntegerv(
-                    GL_MAX_VERTEX_ATTRIBS,
-                    &maximumAttributes
-                );
+                const RendererCapabilities& rendererCapabilities =
+                    Renderer::capabilities();
 
                 Log::Info(
                     "Maximum number of vertex attributes supported: "
-                    + std::to_string(maximumAttributes)
+                    + std::to_string(
+                        rendererCapabilities.maximumVertexAttributes
+                    )
                 );
 
 
@@ -210,12 +206,6 @@ namespace
             }
             void onRender() override
             {
-                glClearColor(0.2f, 0.5f, 1.0f, 1.0f);
-                glClear(
-                    GL_COLOR_BUFFER_BIT
-                    | GL_DEPTH_BUFFER_BIT
-                );
-
                 if (model_)
                 {
                     for (const glm::mat4& modelTransform
@@ -601,6 +591,13 @@ int main()
         specification.vsync=true;
         specification.width = 1280;
         specification.height = 720;
+        specification.renderer.clearColor =
+            glm::vec4(0.2f, 0.5f, 1.0f, 1.0f);
+        specification.renderer.depthTesting = true;
+        specification.renderer.depthWrite = true;
+        specification.renderer.depthFunction =
+            DepthCompareFunction::Less;
+        specification.renderer.depthBufferBits = 24;
 
          SandboxApplication application(
             std::move(specification)
